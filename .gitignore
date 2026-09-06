@@ -1,0 +1,11 @@
+
+NeonWorlds/Library/
+NeonWorlds/Temp/
+NeonWorlds/Logs/
+NeonWorlds/obj/
+NeonWorlds/Build/
+NeonWorlds/Builds/
+NeonWorlds/UserSettings/
+*.py
+.vs/
+.idea/
