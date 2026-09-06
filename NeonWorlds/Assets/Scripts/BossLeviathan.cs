@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -51,8 +51,8 @@ public class BossLeviathan : MonoBehaviour
 
         gravityBody = GetComponent<GravityBody>();
         if (gravityBody == null) gravityBody = gameObject.AddComponent<GravityBody>();
-        // Massive floating stance above planet surface
-        gravityBody.surfaceOffset = 2.0f;
+        // Elevated surface offset to ensure colossal chassis floats perfectly above planet curvature
+        gravityBody.surfaceOffset = 3.8f;
 
         BuildVisuals();
 
@@ -60,6 +60,7 @@ public class BossLeviathan : MonoBehaviour
         if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
         sc.isTrigger = false;
         sc.radius = 2.8f;
+        sc.center = Vector3.zero;
     }
 
     void Start()
@@ -90,12 +91,12 @@ public class BossLeviathan : MonoBehaviour
         armorMat.EnableKeyword("_EMISSION");
         armorMat.SetColor("_EmissionColor", new Color(0.1f, 0.15f, 0.25f));
 
-        // 2. Colossal Central Core (5.2 scale)
+        // 2. Colossal Central Core (5.0 scale)
         GameObject coreObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         coreObj.name = "BossCore";
         coreObj.transform.SetParent(transform, false);
         coreObj.transform.localPosition = Vector3.zero;
-        coreObj.transform.localScale = Vector3.one * 5.2f;
+        coreObj.transform.localScale = Vector3.one * 5.0f;
         Destroy(coreObj.GetComponent<Collider>());
         coreObj.GetComponent<MeshRenderer>().material = coreMat;
         coreTransform = coreObj.transform;
@@ -104,22 +105,22 @@ public class BossLeviathan : MonoBehaviour
         GameObject eyeObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         eyeObj.name = "BossEye";
         eyeObj.transform.SetParent(transform, false);
-        eyeObj.transform.localPosition = new Vector3(0, 0, 2.4f);
-        eyeObj.transform.localScale = Vector3.one * 2.0f;
+        eyeObj.transform.localPosition = new Vector3(0, 0, 2.5f);
+        eyeObj.transform.localScale = Vector3.one * 1.8f;
         Destroy(eyeObj.GetComponent<Collider>());
         eyeObj.GetComponent<MeshRenderer>().material = eyeMat;
         eyeTransform = eyeObj.transform;
 
-        // 4. Hexagonal Exoskeleton Armor Plates
+        // 4. Hexagonal Exoskeleton Armor Plates (Horizontal tangent to planet)
         GameObject chassisObj = new GameObject("ChassisArmor");
         chassisObj.transform.SetParent(transform, false);
-        chassisObj.transform.localPosition = Vector3.zero;
+        chassisObj.transform.localPosition = new Vector3(0, 0.3f, 0);
 
         int plateCount = 6;
         for (int i = 0; i < plateCount; i++)
         {
             float angle = i * (360f / plateCount);
-            Quaternion rot = Quaternion.Euler(0, angle, 15f);
+            Quaternion rot = Quaternion.Euler(0, angle, 0);
             Vector3 pos = rot * Vector3.forward * 3.2f;
 
             GameObject plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -127,7 +128,7 @@ public class BossLeviathan : MonoBehaviour
             plate.transform.SetParent(chassisObj.transform, false);
             plate.transform.localPosition = pos;
             plate.transform.localRotation = rot;
-            plate.transform.localScale = new Vector3(1.6f, 0.5f, 4.2f);
+            plate.transform.localScale = new Vector3(1.6f, 0.5f, 3.8f);
             Destroy(plate.GetComponent<Collider>());
             plate.GetComponent<MeshRenderer>().material = armorMat;
             armorPlates.Add(plate.transform);
@@ -136,7 +137,7 @@ public class BossLeviathan : MonoBehaviour
         // 5. Inner Ring (4 Heavy Plasma Cannons)
         GameObject innerPivot = new GameObject("InnerRingPivot");
         innerPivot.transform.SetParent(transform, false);
-        innerPivot.transform.localPosition = Vector3.zero;
+        innerPivot.transform.localPosition = new Vector3(0, 0.2f, 0);
         innerRingPivot = innerPivot.transform;
 
         int innerCount = 4;
@@ -144,24 +145,24 @@ public class BossLeviathan : MonoBehaviour
         {
             float angle = i * (360f / innerCount);
             Quaternion rot = Quaternion.Euler(0, angle, 0);
-            Vector3 pos = rot * Vector3.forward * 5.5f;
+            Vector3 pos = rot * Vector3.forward * 5.2f;
 
             GameObject cannon = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cannon.name = "HeavyCannon_" + i;
             cannon.transform.SetParent(innerRingPivot, false);
             cannon.transform.localPosition = pos;
             cannon.transform.localRotation = rot;
-            cannon.transform.localScale = new Vector3(0.9f, 0.9f, 2.4f);
+            cannon.transform.localScale = new Vector3(0.9f, 0.9f, 2.2f);
             Destroy(cannon.GetComponent<Collider>());
             cannon.GetComponent<MeshRenderer>().material = coreMat;
             innerCannons.Add(cannon.transform);
         }
 
-        // 6. Outer Ring (6 Gyroscopic Energy Fins)
+        // 6. Outer Ring (6 Gyroscopic Energy Fins - Plane parallel to ground)
         GameObject outerPivot = new GameObject("OuterRingPivot");
         outerPivot.transform.SetParent(transform, false);
-        outerPivot.transform.localPosition = Vector3.zero;
-        outerPivot.transform.localRotation = Quaternion.Euler(25f, 0, 0);
+        outerPivot.transform.localPosition = new Vector3(0, 0.8f, 0);
+        outerPivot.transform.localRotation = Quaternion.identity;
         outerRingPivot = outerPivot.transform;
 
         int outerCount = 6;
@@ -169,14 +170,14 @@ public class BossLeviathan : MonoBehaviour
         {
             float angle = i * (360f / outerCount);
             Quaternion rot = Quaternion.Euler(0, angle, 0);
-            Vector3 pos = rot * Vector3.forward * 7.5f;
+            Vector3 pos = rot * Vector3.forward * 6.8f;
 
             GameObject fin = GameObject.CreatePrimitive(PrimitiveType.Cube);
             fin.name = "EnergyFin_" + i;
             fin.transform.SetParent(outerRingPivot, false);
             fin.transform.localPosition = pos;
-            fin.transform.localRotation = rot * Quaternion.Euler(45f, 0, 0);
-            fin.transform.localScale = new Vector3(0.5f, 2.2f, 1.2f);
+            fin.transform.localRotation = rot * Quaternion.Euler(0, 0, 35f);
+            fin.transform.localScale = new Vector3(0.5f, 1.6f, 1.8f);
             Destroy(fin.GetComponent<Collider>());
             fin.GetComponent<MeshRenderer>().material = coreMat;
             outerFins.Add(fin.transform);
@@ -455,7 +456,8 @@ public class BossLeviathan : MonoBehaviour
         float planetRadius = transform.parent.localScale.x * 0.5f;
         Vector3 newPos = player.position + aheadDir * 10f;
         Vector3 newNormal = (newPos - transform.parent.position).normalized;
-        transform.position = transform.parent.position + newNormal * (planetRadius + 2.0f);
+        float offset = gravityBody != null ? gravityBody.surfaceOffset : 3.8f;
+        transform.position = transform.parent.position + newNormal * (planetRadius + offset);
 
         t = 0f;
         while (t < 0.3f)
