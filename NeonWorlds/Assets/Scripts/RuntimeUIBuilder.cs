@@ -57,7 +57,7 @@ public static class RuntimeUIBuilder
         textRt.anchoredPosition = Vector2.zero;
 
         bossText = textObj.AddComponent<Text>();
-        bossText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        bossText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         bossText.text = "LEVIATA ORBITAL - GUARDIÃO DO PLANETA";
         bossText.fontSize = 18;
         bossText.fontStyle = FontStyle.Bold;
@@ -106,7 +106,7 @@ public static class RuntimeUIBuilder
         trt.anchorMin = new Vector2(0f, 0.65f); trt.anchorMax = new Vector2(1f, 0.9f);
         trt.sizeDelta = Vector2.zero; trt.anchoredPosition = Vector2.zero;
         Text tText = title.AddComponent<Text>();
-        tText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         tText.text = "PLANETA PURIFICADO!\nO Leviata Foi Derrotado";
         tText.fontSize = 38; tText.alignment = TextAnchor.MiddleCenter; tText.color = new Color(0.2f, 1f, 0.5f);
 
@@ -117,7 +117,7 @@ public static class RuntimeUIBuilder
         srt.anchorMin = new Vector2(0f, 0.4f); srt.anchorMax = new Vector2(1f, 0.6f);
         srt.sizeDelta = Vector2.zero; srt.anchoredPosition = Vector2.zero;
         Text sText = stats.AddComponent<Text>();
-        sText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        sText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         int minutes = Mathf.FloorToInt(gm.matchTime / 60F);
         int seconds = Mathf.FloorToInt(gm.matchTime - minutes * 60);
         sText.text = "Nivel Final: " + gm.level + "\nTempo de Conquista: " + string.Format("{0:00}:{1:00}", minutes, seconds);
@@ -138,7 +138,7 @@ public static class RuntimeUIBuilder
         Image rImg = playAgainBtn.AddComponent<Image>(); rImg.color = new Color(0.2f, 0.8f, 0.4f);
         Button rBtn = playAgainBtn.AddComponent<Button>();
         GameObject rTxtObj = new GameObject("Text"); rTxtObj.transform.SetParent(playAgainBtn.transform, false);
-        Text rTxt = rTxtObj.AddComponent<Text>(); rTxt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        Text rTxt = rTxtObj.AddComponent<Text>(); rTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         rTxt.text = "JOGAR NOVAMENTE"; rTxt.alignment = TextAnchor.MiddleCenter; rTxt.color = Color.black; rTxt.fontSize = 22;
         RectTransform rtr = rTxtObj.GetComponent<RectTransform>(); rtr.anchorMin = Vector2.zero; rtr.anchorMax = Vector2.one; rtr.sizeDelta = Vector2.zero;
         rBtn.onClick.AddListener(() => { 
@@ -152,7 +152,7 @@ public static class RuntimeUIBuilder
         Image qImg = quitBtn.AddComponent<Image>(); qImg.color = new Color(0.5f, 0.5f, 0.5f);
         Button qBtn = quitBtn.AddComponent<Button>();
         GameObject qTxtObj = new GameObject("Text"); qTxtObj.transform.SetParent(quitBtn.transform, false);
-        Text qTxt = qTxtObj.AddComponent<Text>(); qTxt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        Text qTxt = qTxtObj.AddComponent<Text>(); qTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         qTxt.text = "SAIR"; qTxt.alignment = TextAnchor.MiddleCenter; qTxt.color = Color.white; qTxt.fontSize = 22;
         RectTransform qtr = qTxtObj.GetComponent<RectTransform>(); qtr.anchorMin = Vector2.zero; qtr.anchorMax = Vector2.one; qtr.sizeDelta = Vector2.zero;
         qBtn.onClick.AddListener(() => { Application.Quit(); });
@@ -179,7 +179,7 @@ public static class RuntimeUIBuilder
         trt.anchorMin = new Vector2(0f, 0.7f); trt.anchorMax = new Vector2(1f, 0.9f);
         trt.sizeDelta = Vector2.zero; trt.anchoredPosition = Vector2.zero;
         Text tText = title.AddComponent<Text>();
-        tText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         tText.text = "SISTEMAS CRITICOS FALHARAM\nNave Destruida";
         tText.fontSize = 40; tText.alignment = TextAnchor.MiddleCenter; tText.color = new Color(1f, 0.2f, 0.2f);
 
@@ -190,7 +190,7 @@ public static class RuntimeUIBuilder
         srt.anchorMin = new Vector2(0f, 0.4f); srt.anchorMax = new Vector2(1f, 0.6f);
         srt.sizeDelta = Vector2.zero; srt.anchoredPosition = Vector2.zero;
         Text sText = stats.AddComponent<Text>();
-        sText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        sText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         int minutes = Mathf.FloorToInt(gm.matchTime / 60F);
         int seconds = Mathf.FloorToInt(gm.matchTime - minutes * 60);
         sText.text = "Nivel Alcancado: " + gm.level + "\nTempo Sobrevivido: " + string.Format("{0:00}:{1:00}", minutes, seconds);
@@ -211,7 +211,7 @@ public static class RuntimeUIBuilder
         Image rImg = restartBtn.AddComponent<Image>(); rImg.color = new Color(0.2f, 0.8f, 0.2f);
         Button rBtn = restartBtn.AddComponent<Button>();
         GameObject rTxtObj = new GameObject("Text"); rTxtObj.transform.SetParent(restartBtn.transform, false);
-        Text rTxt = rTxtObj.AddComponent<Text>(); rTxt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        Text rTxt = rTxtObj.AddComponent<Text>(); rTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         rTxt.text = "REINICIAR"; rTxt.alignment = TextAnchor.MiddleCenter; rTxt.color = Color.black; rTxt.fontSize = 24;
         RectTransform rtr = rTxtObj.GetComponent<RectTransform>(); rtr.anchorMin = Vector2.zero; rtr.anchorMax = Vector2.one; rtr.sizeDelta = Vector2.zero;
         rBtn.onClick.AddListener(() => { UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name); });
@@ -222,7 +222,7 @@ public static class RuntimeUIBuilder
         Image qImg = quitBtn.AddComponent<Image>(); qImg.color = new Color(0.8f, 0.2f, 0.2f);
         Button qBtn = quitBtn.AddComponent<Button>();
         GameObject qTxtObj = new GameObject("Text"); qTxtObj.transform.SetParent(quitBtn.transform, false);
-        Text qTxt = qTxtObj.AddComponent<Text>(); qTxt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        Text qTxt = qTxtObj.AddComponent<Text>(); qTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         qTxt.text = "SAIR"; qTxt.alignment = TextAnchor.MiddleCenter; qTxt.color = Color.black; qTxt.fontSize = 24;
         RectTransform qtr = qTxtObj.GetComponent<RectTransform>(); qtr.anchorMin = Vector2.zero; qtr.anchorMax = Vector2.one; qtr.sizeDelta = Vector2.zero;
         qBtn.onClick.AddListener(() => { Application.Quit(); });
@@ -336,3 +336,4 @@ public static class RuntimeUIBuilder
         panel.SetActive(false);
     }
 }
+
