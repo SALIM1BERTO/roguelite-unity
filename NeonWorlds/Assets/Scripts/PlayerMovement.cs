@@ -33,9 +33,14 @@ public class PlayerMovement : MonoBehaviour
         if (tp != null) Destroy(tp.gameObject);
     }
 
+    private bool isUsingGamepad = false;
+
     void Update()
     {
         if (Time.timeScale == 0) return;
+
+        if (mainCam == null)
+            mainCam = Camera.main;
 
         if (dashTimer > 0f)
             dashTimer -= Time.deltaTime;
@@ -43,15 +48,39 @@ public class PlayerMovement : MonoBehaviour
         float x = 0;
         float z = 0;
 
+        // Sensoriamento dinâmico de dispositivo ativo (Mouse/Teclado vs Gamepad)
+        if (Gamepad.current != null)
+        {
+            Vector2 rStick = Gamepad.current.rightStick.ReadValue();
+            Vector2 lStick = Gamepad.current.leftStick.ReadValue();
+            if (rStick.sqrMagnitude > 0.15f || lStick.sqrMagnitude > 0.2f || Gamepad.current.buttonSouth.wasPressedThisFrame)
+            {
+                isUsingGamepad = true;
+            }
+        }
+
         if (Keyboard.current != null)
         {
+            if (Keyboard.current.anyKey.wasPressedThisFrame)
+            {
+                isUsingGamepad = false;
+            }
+
             if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) z += 1f;
             if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) z -= 1f;
             if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) x += 1f;
             if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) x -= 1f;
         }
 
-        if (Gamepad.current != null)
+        if (Mouse.current != null)
+        {
+            if (Mouse.current.delta.ReadValue().sqrMagnitude > 0.2f || Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                isUsingGamepad = false;
+            }
+        }
+
+        if (isUsingGamepad && Gamepad.current != null)
         {
             Vector2 stick = Gamepad.current.leftStick.ReadValue();
             if (stick.sqrMagnitude > 0.1f)
@@ -65,13 +94,50 @@ public class PlayerMovement : MonoBehaviour
         Vector2 input = Vector2.ClampMagnitude(new Vector2(x, z), 1f);
 
         Vector3 moveDir = Vector3.zero;
+        Vector3 targetFaceDir = Vector3.zero;
+
         if (mainCam != null)
         {
             Vector3 camForward = Vector3.ProjectOnPlane(mainCam.transform.forward, transform.up).normalized;
             Vector3 camRight = Vector3.ProjectOnPlane(mainCam.transform.right, transform.up).normalized;
+            Vector3 camUp = Vector3.ProjectOnPlane(mainCam.transform.up, transform.up).normalized;
+
             if (input.sqrMagnitude > 0.01f)
             {
                 moveDir = (camForward * input.y + camRight * input.x).normalized;
+            }
+
+            // Cálculo da direção onde a nave deve mirar
+            if (isUsingGamepad && Gamepad.current != null)
+            {
+                Vector2 rStick = Gamepad.current.rightStick.ReadValue();
+                if (rStick.sqrMagnitude > 0.15f)
+                {
+                    targetFaceDir = (camRight * rStick.normalized.x + camUp * rStick.normalized.y).normalized;
+                }
+                else if (moveDir.sqrMagnitude > 0.01f)
+                {
+                    targetFaceDir = moveDir;
+                }
+            }
+            else // Modo Mouse e Teclado
+            {
+                if (Mouse.current != null)
+                {
+                    Vector2 mousePos = Mouse.current.position.ReadValue();
+                    Vector2 playerScreenPos = mainCam.WorldToScreenPoint(transform.position);
+                    Vector2 mouseDelta = mousePos - playerScreenPos;
+
+                    if (mouseDelta.sqrMagnitude > 25f) // Mais de 5 pixels de distância para evitar jitter
+                    {
+                        targetFaceDir = (camRight * mouseDelta.normalized.x + camUp * mouseDelta.normalized.y).normalized;
+                    }
+                }
+
+                if (targetFaceDir.sqrMagnitude < 0.001f && moveDir.sqrMagnitude > 0.01f)
+                {
+                    targetFaceDir = moveDir;
+                }
             }
         }
 
@@ -89,12 +155,17 @@ public class PlayerMovement : MonoBehaviour
 
         if (dashInput && dashTimer <= 0f && !isDashing)
         {
-            Vector3 chosenDir = moveDir.sqrMagnitude > 0.01f ? moveDir : transform.forward;
+            Vector3 chosenDir = moveDir.sqrMagnitude > 0.01f ? moveDir : (targetFaceDir.sqrMagnitude > 0.01f ? targetFaceDir : transform.forward);
             StartCoroutine(PerformDash(chosenDir));
         }
 
         if (isDashing)
         {
+            if (dashDir.sqrMagnitude > 0.01f)
+            {
+                Quaternion dashRot = Quaternion.LookRotation(dashDir, transform.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, dashRot, 30f * Time.deltaTime);
+            }
             // Move rápido na direção do dash acompanhando a curvatura planetária
             Vector3 localDashDir = transform.parent != null ? transform.parent.InverseTransformDirection(dashDir) : dashDir;
             float localSpeed = transform.parent != null ? (moveSpeed * dashSpeedMultiplier) / transform.parent.localScale.x : (moveSpeed * dashSpeedMultiplier);
@@ -102,13 +173,17 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        // 1. Rotação suave e responsiva em direção à mira (mouse ou analógico direito)
+        if (targetFaceDir.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(targetFaceDir, transform.up);
+            float activeRotSpeed = Mathf.Max(rotationSpeed, 22f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, activeRotSpeed * Time.deltaTime);
+        }
+
+        // 2. Movimentação independente da rotação (Permite strafe e andar atirando em 360 graus)
         if (moveDir.sqrMagnitude > 0.01f)
         {
-            // Vira o corpo do jogador suavemente para onde ele está andando
-            Quaternion targetRotation = Quaternion.LookRotation(moveDir, transform.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-
-            // Move
             Vector3 localMoveDir = transform.parent != null ? transform.parent.InverseTransformDirection(moveDir) : moveDir;
             float localSpeed = transform.parent != null ? moveSpeed / transform.parent.localScale.x : moveSpeed;
             transform.localPosition += localMoveDir * localSpeed * Time.deltaTime;

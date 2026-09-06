@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.InputSystem;
 
@@ -97,7 +97,15 @@ public class Weapon : MonoBehaviour
         if (Gamepad.current != null)
         {
             aimInput = Gamepad.current.rightStick.ReadValue();
-            if (aimInput.sqrMagnitude > 0.1f) isAiming = true;
+            if (aimInput.sqrMagnitude > 0.15f)
+            {
+                isAiming = true;
+            }
+            else if (Gamepad.current.rightTrigger.isPressed || Gamepad.current.rightShoulder.isPressed)
+            {
+                isAiming = true;
+                aimInput = Vector2.zero;
+            }
         }
 
         if (!isAiming && Mouse.current != null && Mouse.current.leftButton.isPressed)
@@ -127,6 +135,8 @@ public class Weapon : MonoBehaviour
         Vector3 camRight = Vector3.ProjectOnPlane(Camera.main.transform.right, transform.up).normalized;
         
         Vector3 baseShootDir = (camRight * aimInput.x + camUp * aimInput.y).normalized;
+        if (baseShootDir.sqrMagnitude < 0.01f)
+            baseShootDir = transform.forward;
 
         if (baseShootDir.sqrMagnitude < 0.01f) return;
 
