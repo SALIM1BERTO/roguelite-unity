@@ -1,36 +1,60 @@
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance; public GameObject floatingTextPrefab;
-    public Transform player; public int hp = 100; public int maxHp = 100;
+    public static GameManager Instance;
+    public GameObject floatingTextPrefab;
+    public Transform player;
+    public int hp = 100;
+    public int maxHp = 100;
 
-    public UnityEngine.UI.Text timeText;
-    public UnityEngine.UI.Text hpText;
+    public Text timeText;
+    public Text hpText;
     public float matchTime = 0f;
 
     public bool isInvincible = false;
     public bool isGameOver = false;
-    private float dropTimer = 30f; // First drop at 30s
-
-
+    private float dropTimer = 30f;
 
     public int xp = 0;
     public int level = 1;
     public float magnetRadius = 5f;
-    
+
+    [Header("Meta-Progressão & Upgrades")]
+    public int availableRerolls = 0;
+    public float lifeStealChance = 0f;
+    private Dictionary<UpgradeType, int> upgradeLevels = new Dictionary<UpgradeType, int>();
+
     [Header("Level Up UI")]
     public GameObject levelUpPanel;
-    public UnityEngine.UI.Button[] upgradeButtons;
-    public UnityEngine.UI.Text[] upgradeTitles;
-    public UnityEngine.UI.Text[] upgradeDescs;
+    public Button[] upgradeButtons;
+    public Text[] upgradeTitles;
+    public Text[] upgradeDescs;
 
-    public enum UpgradeType { Spread, FireRate, Speed, Magnet, Heal, Pierce, Bounce, Explosive }
+    public enum UpgradeRarity { Common, Rare, Epic, Legendary }
+
+    public enum UpgradeType
+    {
+        Spread,
+        FireRate,
+        Damage,
+        Speed,
+        Magnet,
+        Heal,
+        Pierce,
+        Bounce,
+        Critical,
+        Explosive,
+        OrbitalMines,
+        SentinelDrone,
+        AegisShield,
+        LifeSteal
+    }
+
     private UpgradeType[] currentUpgrades = new UpgradeType[3];
-
     public int xpToNextLevel = 100;
-
     public RectTransform xpFill;
     public Text levelText;
 
@@ -44,112 +68,265 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        CreateHUD(); SpawnPlayerCorrectly();
+        CreateHUD();
+        SpawnPlayerCorrectly();
         UpdateUI();
+
+        if (player != null)
+        {
+            MetaProgression.ApplyPermanentBuffs(this, player.GetComponent<PlayerMovement>(), player.GetComponent<Weapon>());
+        }
     }
 
-    
-    
-    void ShowLevelUpScreen()
+    public int GetUpgradeLevel(UpgradeType type)
     {
-        if (levelUpPanel == null || upgradeButtons == null || upgradeButtons.Length < 3 || upgradeButtons[0] == null) { RuntimeUIBuilder.BuildLevelUpUI(this); }
+        if (upgradeLevels.ContainsKey(type)) return upgradeLevels[type];
+        return 0;
+    }
+
+    public int GetMaxLevel(UpgradeType type)
+    {
+        switch (type)
+        {
+            case UpgradeType.Explosive: return 1;
+            case UpgradeType.Pierce: return 3;
+            case UpgradeType.Bounce: return 3;
+            case UpgradeType.Critical: return 3;
+            case UpgradeType.OrbitalMines: return 3;
+            case UpgradeType.SentinelDrone: return 3;
+            case UpgradeType.AegisShield: return 3;
+            case UpgradeType.LifeSteal: return 3;
+            case UpgradeType.Spread: return 4;
+            case UpgradeType.Speed: return 4;
+            case UpgradeType.Magnet: return 4;
+            case UpgradeType.FireRate: return 5;
+            case UpgradeType.Damage: return 5;
+            case UpgradeType.Heal: return 99;
+            default: return 5;
+        }
+    }
+
+    public UpgradeRarity GetRarity(UpgradeType type)
+    {
+        switch (type)
+        {
+            case UpgradeType.Explosive:
+            case UpgradeType.OrbitalMines:
+            case UpgradeType.SentinelDrone:
+            case UpgradeType.AegisShield:
+            case UpgradeType.LifeSteal:
+                return UpgradeRarity.Epic;
+            case UpgradeType.Pierce:
+            case UpgradeType.Bounce:
+            case UpgradeType.Critical:
+            case UpgradeType.Spread:
+                return UpgradeRarity.Rare;
+            default:
+                return UpgradeRarity.Common;
+        }
+    }
+
+    public void ShowLevelUpScreen()
+    {
+        if (levelUpPanel == null || upgradeButtons == null || upgradeButtons.Length < 3 || upgradeButtons[0] == null)
+        {
+            RuntimeUIBuilder.BuildLevelUpUI(this);
+        }
         Time.timeScale = 0f;
         GameAudio.SetGameplayPaused(true);
         GameAudio.Play(AudioCue.LevelUp);
         levelUpPanel.SetActive(true);
 
-        UpgradeType[] allTypes = (UpgradeType[])System.Enum.GetValues(typeof(UpgradeType));
-        
+        // Build list of valid upgrades not at max level
+        List<UpgradeType> pool = new List<UpgradeType>();
+        foreach (UpgradeType t in System.Enum.GetValues(typeof(UpgradeType)))
+        {
+            if (GetUpgradeLevel(t) < GetMaxLevel(t))
+            {
+                pool.Add(t);
+            }
+        }
+
+        // Shuffle pool
+        for (int i = 0; i < pool.Count; i++)
+        {
+            int r = Random.Range(i, pool.Count);
+            var temp = pool[i];
+            pool[i] = pool[r];
+            pool[r] = temp;
+        }
+
         for (int i = 0; i < 3; i++)
         {
-            UpgradeType type = allTypes[Random.Range(0, allTypes.Length)];
+            UpgradeType type = (i < pool.Count) ? pool[i] : UpgradeType.Heal;
             currentUpgrades[i] = type;
-            
-            UnityEngine.UI.Text iconText = upgradeButtons[i].transform.Find("Icon") != null ? upgradeButtons[i].transform.Find("Icon").GetComponent<UnityEngine.UI.Text>() : null;
+            int currentLvl = GetUpgradeLevel(type);
+            int maxLvl = GetMaxLevel(type);
+            UpgradeRarity rarity = GetRarity(type);
+
+            RuntimeUIBuilder.StyleUpgradeCard(upgradeButtons[i], rarity);
+
+            Text iconText = upgradeButtons[i].transform.Find("Icon") != null ? upgradeButtons[i].transform.Find("Icon").GetComponent<Text>() : null;
+
+            string levelBadge = maxLvl < 90 ? $" [NV {currentLvl + 1}/{maxLvl}]" : "";
 
             switch (type)
             {
                 case UpgradeType.Spread:
-                    if (iconText != null) { iconText.text = "»»»"; iconText.color = new Color(1f, 0.5f, 0f); }
-                    upgradeTitles[i].text = "Tiro Múltiplo";
+                    if (iconText != null) { iconText.text = "»»»"; iconText.color = new Color(0.2f, 0.7f, 1f); }
+                    upgradeTitles[i].text = "Tiro Múltiplo" + levelBadge;
                     upgradeDescs[i].text = "Adiciona +1 projétil aos seus disparos.";
                     break;
                 case UpgradeType.FireRate:
                     if (iconText != null) { iconText.text = "⚡"; iconText.color = new Color(1f, 0.9f, 0f); }
-                    upgradeTitles[i].text = "Tiro Rápido";
+                    upgradeTitles[i].text = "Tiro Rápido" + levelBadge;
                     upgradeDescs[i].text = "Aumenta a cadência de disparo em 25%.";
+                    break;
+                case UpgradeType.Damage:
+                    if (iconText != null) { iconText.text = "⚔"; iconText.color = new Color(1f, 0.4f, 0.2f); }
+                    upgradeTitles[i].text = "Sobrecarga de Energia" + levelBadge;
+                    upgradeDescs[i].text = "Aumenta todo o dano da nave em +20%.";
                     break;
                 case UpgradeType.Speed:
                     if (iconText != null) { iconText.text = "☄"; iconText.color = new Color(0f, 0.8f, 1f); }
-                    upgradeTitles[i].text = "Propulsores";
+                    upgradeTitles[i].text = "Propulsores" + levelBadge;
                     upgradeDescs[i].text = "Aumenta a velocidade de movimento da nave.";
                     break;
                 case UpgradeType.Magnet:
                     if (iconText != null) { iconText.text = "🧲"; iconText.color = new Color(1f, 0f, 1f); }
-                    upgradeTitles[i].text = "Magnetismo";
+                    upgradeTitles[i].text = "Magnetismo" + levelBadge;
                     upgradeDescs[i].text = "Aumenta o raio de coleta de gemas de XP.";
                     break;
                 case UpgradeType.Heal:
                     if (iconText != null) { iconText.text = "♥"; iconText.color = new Color(1f, 0.2f, 0.4f); }
-                    upgradeTitles[i].text = "Reparo Estrutural";
-                    upgradeDescs[i].text = "Cura 50 HP e aumenta vida máxima.";
+                    upgradeTitles[i].text = "Reparo de Emergência";
+                    upgradeDescs[i].text = "Cura 60 HP e concede +20 de vida máxima.";
                     break;
                 case UpgradeType.Pierce:
                     if (iconText != null) { iconText.text = "⤏"; iconText.color = new Color(0.8f, 1f, 0.8f); }
-                    upgradeTitles[i].text = "Projétil Perfurante";
+                    upgradeTitles[i].text = "Projétil Perfurante" + levelBadge;
                     upgradeDescs[i].text = "Seus tiros atravessam +1 inimigo antes de sumir.";
                     break;
                 case UpgradeType.Bounce:
                     if (iconText != null) { iconText.text = "⤡"; iconText.color = new Color(0.2f, 1f, 0.2f); }
-                    upgradeTitles[i].text = "Ricochete Cósmico";
+                    upgradeTitles[i].text = "Ricochete Cósmico" + levelBadge;
                     upgradeDescs[i].text = "Tiros quicam para o próximo inimigo mais próximo!";
+                    break;
+                case UpgradeType.Critical:
+                    if (iconText != null) { iconText.text = "✦"; iconText.color = new Color(1f, 0.85f, 0.1f); }
+                    upgradeTitles[i].text = "Sobrecarga Crítica" + levelBadge;
+                    upgradeDescs[i].text = "+15% de chance de causar 2.5x dano crítico!";
                     break;
                 case UpgradeType.Explosive:
                     if (iconText != null) { iconText.text = "✸"; iconText.color = new Color(1f, 0.1f, 0.1f); }
-                    upgradeTitles[i].text = "Munição Explosiva";
-                    upgradeDescs[i].text = "Acertos geram uma explosão em área! (AoE)";
+                    upgradeTitles[i].text = "Munição Explosiva" + levelBadge;
+                    upgradeDescs[i].text = "Acertos geram uma explosão em área devastadora!";
+                    break;
+                case UpgradeType.OrbitalMines:
+                    if (iconText != null) { iconText.text = "◉"; iconText.color = new Color(1f, 0f, 0.7f); }
+                    upgradeTitles[i].text = "Minas de Matéria Escura" + levelBadge;
+                    upgradeDescs[i].text = "Solta minas gravitacionais na órbita que detonam em aproximação.";
+                    break;
+                case UpgradeType.SentinelDrone:
+                    if (iconText != null) { iconText.text = "🛸"; iconText.color = new Color(0f, 1f, 0.8f); }
+                    upgradeTitles[i].text = "Drone Sentinela" + levelBadge;
+                    upgradeDescs[i].text = "Satélite orbital que dispara feixes laser automáticos.";
+                    break;
+                case UpgradeType.AegisShield:
+                    if (iconText != null) { iconText.text = "🛡"; iconText.color = new Color(0.2f, 0.6f, 1f); }
+                    upgradeTitles[i].text = "Escudo Aegis" + levelBadge;
+                    upgradeDescs[i].text = "Barreira protetora que anula 1 impacto e regenera com o tempo.";
+                    break;
+                case UpgradeType.LifeSteal:
+                    if (iconText != null) { iconText.text = "🩸"; iconText.color = new Color(0.9f, 0.1f, 0.3f); }
+                    upgradeTitles[i].text = "Nanites Vampíricos" + levelBadge;
+                    upgradeDescs[i].text = "+6% de chance de restaurar vida ao derrotar inimigos.";
                     break;
             }
-            
+
             int index = i;
             upgradeButtons[i].onClick.RemoveAllListeners();
             upgradeButtons[i].onClick.AddListener(() => ApplyUpgrade(index));
+        }
+
+        Transform rerollBtn = levelUpPanel.transform.Find("RerollBtn");
+        if (rerollBtn != null)
+        {
+            rerollBtn.gameObject.SetActive(availableRerolls > 0);
+            Text rTxt = rerollBtn.GetComponentInChildren<Text>();
+            if (rTxt != null) rTxt.text = "RE-ROLL (" + availableRerolls + ")";
         }
     }
 
     void ApplyUpgrade(int index)
     {
         UpgradeType type = currentUpgrades[index];
-        Weapon w = player.GetComponent<Weapon>();
-        PlayerMovement pm = player.GetComponent<PlayerMovement>();
+        if (!upgradeLevels.ContainsKey(type)) upgradeLevels[type] = 0;
+        upgradeLevels[type]++;
+
+        Weapon w = player != null ? player.GetComponent<Weapon>() : null;
+        PlayerMovement pm = player != null ? player.GetComponent<PlayerMovement>() : null;
 
         switch (type)
         {
             case UpgradeType.Spread:
-                if (w) w.spreadCount++;
+                if (w) w.bonusSpread++;
                 break;
             case UpgradeType.FireRate:
-                if (w) w.fireRate *= 1.25f;
+                if (w) w.fireRateMultiplier *= 1.25f;
+                break;
+            case UpgradeType.Damage:
+                if (w) w.damageMultiplier += 0.20f;
                 break;
             case UpgradeType.Speed:
-                if (pm) pm.moveSpeed += 2f;
+                if (pm) pm.moveSpeed += 1.8f;
                 break;
             case UpgradeType.Magnet:
-                magnetRadius += 3f;
+                magnetRadius += 3.5f;
                 break;
             case UpgradeType.Heal:
-                hp += 50;
-                if (hp > maxHp) maxHp = hp;
+                maxHp += 20;
+                hp = Mathf.Min(maxHp, hp + 60);
                 UpdateHPText();
                 break;
             case UpgradeType.Pierce:
-                if (w) w.pierceCount++;
+                if (w) w.bonusPierce++;
                 break;
             case UpgradeType.Bounce:
-                if (w) w.bounceCount++;
+                if (w) w.bonusBounce++;
+                break;
+            case UpgradeType.Critical:
+                if (w) w.critChance = Mathf.Min(0.75f, w.critChance + 0.15f);
                 break;
             case UpgradeType.Explosive:
-                if (w) w.explosive = true;
+                if (w) w.isExplosive = true;
+                break;
+            case UpgradeType.OrbitalMines:
+                if (player != null)
+                {
+                    OrbitalMines mines = player.GetComponent<OrbitalMines>();
+                    if (mines == null) mines = player.gameObject.AddComponent<OrbitalMines>();
+                    mines.level = upgradeLevels[type];
+                }
+                break;
+            case UpgradeType.SentinelDrone:
+                if (player != null)
+                {
+                    SentinelDrone drone = player.GetComponent<SentinelDrone>();
+                    if (drone == null) drone = player.gameObject.AddComponent<SentinelDrone>();
+                    drone.SetLevel(upgradeLevels[type]);
+                }
+                break;
+            case UpgradeType.AegisShield:
+                if (player != null)
+                {
+                    ShieldAegis shield = player.GetComponent<ShieldAegis>();
+                    if (shield == null) shield = player.gameObject.AddComponent<ShieldAegis>();
+                    shield.SetLevel(upgradeLevels[type]);
+                }
+                break;
+            case UpgradeType.LifeSteal:
+                lifeStealChance = Mathf.Min(0.25f, lifeStealChance + 0.06f);
                 break;
         }
 
@@ -159,7 +336,6 @@ public class GameManager : MonoBehaviour
         GameAudio.Play(AudioCue.Upgrade);
     }
 
-    
     void SpawnDropPod()
     {
         GameObject startingPlanet = GameObject.Find("Planet_1");
@@ -195,6 +371,10 @@ public class GameManager : MonoBehaviour
             body.SnapToSurface();
         }
 
+        if (player.GetComponent<OrbitalMines>() == null) player.gameObject.AddComponent<OrbitalMines>();
+        if (player.GetComponent<SentinelDrone>() == null) player.gameObject.AddComponent<SentinelDrone>();
+        if (player.GetComponent<ShieldAegis>() == null) player.gameObject.AddComponent<ShieldAegis>();
+
         GameObject fxPrefab = Resources.Load<GameObject>("TeleportFX");
         if (fxPrefab != null)
         {
@@ -206,7 +386,6 @@ public class GameManager : MonoBehaviour
 
     void CreateHUD()
     {
-        
         GameObject canvasObj = GameObject.Find("CanvasHUD");
         if (canvasObj == null)
         {
@@ -229,13 +408,13 @@ public class GameManager : MonoBehaviour
             GameObject xpBarFill = new GameObject("XPBarFill");
             xpBarFill.transform.SetParent(xpBarBg.transform, false);
             Image fillImg = xpBarFill.AddComponent<Image>();
-            fillImg.color = new Color(0f, 1f, 0.8f); // Neon Cyan
+            fillImg.color = new Color(0f, 1f, 0.8f);
             xpFill = xpBarFill.GetComponent<RectTransform>();
             xpFill.anchorMin = new Vector2(0, 0); xpFill.anchorMax = new Vector2(1, 1);
             xpFill.pivot = new Vector2(0, 0.5f); xpFill.anchoredPosition = new Vector2(0, 0);
             xpFill.sizeDelta = new Vector2(0, 0);
 
-            // Level Text (Bottom Center)
+            // Level Text
             GameObject lvlTextObj = new GameObject("LevelText");
             lvlTextObj.transform.SetParent(xpBarBg.transform, false);
             levelText = lvlTextObj.AddComponent<Text>();
@@ -250,7 +429,7 @@ public class GameManager : MonoBehaviour
             rtTxt.pivot = new Vector2(0.5f, 0.5f); rtTxt.anchoredPosition = new Vector2(0, 0);
             rtTxt.sizeDelta = new Vector2(200, 0);
 
-            // Top HUD (Time & HP)
+            // Top HUD
             GameObject topHud = new GameObject("TopHUD");
             topHud.transform.SetParent(canvasObj.transform, false);
             RectTransform rtTop = topHud.AddComponent<RectTransform>();
@@ -258,7 +437,7 @@ public class GameManager : MonoBehaviour
             rtTop.pivot = new Vector2(0.5f, 1); rtTop.anchoredPosition = new Vector2(0, -20);
             rtTop.sizeDelta = new Vector2(-40, 40);
 
-            // Time Text (Center)
+            // Time Text
             GameObject timeObj = new GameObject("TimeText");
             timeObj.transform.SetParent(topHud.transform, false);
             timeText = timeObj.AddComponent<Text>();
@@ -273,14 +452,14 @@ public class GameManager : MonoBehaviour
             timeRt.pivot = new Vector2(0.5f, 1); timeRt.anchoredPosition = new Vector2(0, 0);
             timeRt.sizeDelta = new Vector2(200, 40);
 
-            // HP Text (Left)
+            // HP Text
             GameObject hpObj = new GameObject("HPText");
             hpObj.transform.SetParent(topHud.transform, false);
             hpText = hpObj.AddComponent<Text>();
             hpText.text = "HP 100/100";
             hpText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             hpText.alignment = TextAnchor.UpperLeft;
-            hpText.color = new Color(1f, 0.2f, 0.4f); // Neon Red/Pink
+            hpText.color = new Color(1f, 0.2f, 0.4f);
             hpText.fontSize = 20;
             hpText.fontStyle = FontStyle.Bold;
             RectTransform hpRt = hpObj.GetComponent<RectTransform>();
@@ -290,7 +469,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    
     void Update()
     {
         if (Time.timeScale > 0)
@@ -306,14 +484,12 @@ public class GameManager : MonoBehaviour
             dropTimer -= Time.deltaTime;
             if (dropTimer <= 0f)
             {
-                dropTimer = 45f; // Drop every 45s
+                dropTimer = 45f;
                 SpawnDropPod();
             }
-}
+        }
     }
 
-    
-    
     public void UpdateHPText()
     {
         if (hpText != null)
@@ -321,7 +497,6 @@ public class GameManager : MonoBehaviour
             hpText.text = $"HP {hp}/{maxHp}";
         }
     }
-
 
     public void AddXP(int amount)
     {
@@ -351,10 +526,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    
+    public void Heal(int amount)
+    {
+        hp = Mathf.Min(maxHp, hp + amount);
+        UpdateHPText();
+    }
+
     public void TakeDamage(int damage)
     {
         if (isInvincible || isGameOver) return;
+
+        ShieldAegis shield = player != null ? player.GetComponent<ShieldAegis>() : null;
+        if (shield != null && shield.TryAbsorbDamage())
+        {
+            return;
+        }
+
         if (damage > 0) GameAudio.Play(AudioCue.PlayerHit);
         hp -= damage;
         UpdateHPText();
@@ -371,6 +558,4 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 0f;
         RuntimeUIBuilder.BuildGameOverUI(this);
     }
-
 }
-

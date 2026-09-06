@@ -8,6 +8,11 @@ public class FloatingText : MonoBehaviour
 
     public void Setup(string text)
     {
+        Setup(text, Color.white, 1f);
+    }
+
+    public void Setup(string text, Color color, float sizeMultiplier = 1f)
+    {
         timer = 0f;
         textMesh = gameObject.GetComponent<TextMesh>();
         if (textMesh == null) {
@@ -17,9 +22,9 @@ public class FloatingText : MonoBehaviour
         textMesh.text = text;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
-        textMesh.characterSize = 0.5f;
-        textMesh.fontSize = 24;
-        textMesh.color = Color.white;
+        textMesh.characterSize = 0.5f * sizeMultiplier;
+        textMesh.fontSize = Mathf.RoundToInt(24 * sizeMultiplier);
+        textMesh.color = color;
         textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         
         MeshRenderer mr = gameObject.GetComponent<MeshRenderer>();

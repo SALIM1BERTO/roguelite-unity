@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.InputSystem;
 
@@ -8,32 +8,52 @@ public class Weapon : MonoBehaviour
     [Header("Tipo de Arma")]
     public WeaponType currentWeapon = WeaponType.Blaster;
 
+    // Base stats per weapon archetype
+    public float baseFireRate = 2.5f;
+    public int baseDamage = 10;
+    public int baseSpreadCount = 1;
+    public int basePierceCount = 0;
+    public int baseBounceCount = 0;
+    public bool baseExplosive = false;
+
+    // Persistent player upgrades (never reset on weapon change)
+    [Header("Upgrades Persistentes do Jogador")]
+    public float fireRateMultiplier = 1f;
+    public float damageMultiplier = 1f;
+    public int bonusDamage = 0;
+    public int bonusSpread = 0;
+    public int bonusPierce = 0;
+    public int bonusBounce = 0;
+    public bool isExplosive = false;
+    public float critChance = 0.05f; // 5% base
+    public float critMultiplier = 2.5f;
+
+    // Compatibility properties
+    public float fireRate { get => baseFireRate; set => baseFireRate = value; }
+    public int damage { get => Mathf.RoundToInt((baseDamage + bonusDamage) * damageMultiplier); set => baseDamage = value; }
+    public int spreadCount { get => baseSpreadCount + bonusSpread; set => bonusSpread = Mathf.Max(0, value - baseSpreadCount); }
+    public int pierceCount { get => basePierceCount + bonusPierce; set => bonusPierce = Mathf.Max(0, value - basePierceCount); }
+    public int bounceCount { get => baseBounceCount + bonusBounce; set => bonusBounce = Mathf.Max(0, value - baseBounceCount); }
+    public bool explosive { get => baseExplosive || isExplosive; set => isExplosive = value; }
+
     public void SetupWeapon()
     {
         switch(currentWeapon)
         {
             case WeaponType.Blaster:
-                fireRate = 2.5f; damage = 10; spreadCount = 1; pierceCount = 0; bounceCount = 0; explosive = false;
+                baseFireRate = 2.5f; baseDamage = 10; baseSpreadCount = 1; basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
             case WeaponType.Shotgun:
-                fireRate = 1.0f; damage = 6; spreadCount = 5; pierceCount = 0; bounceCount = 0; explosive = false;
+                baseFireRate = 1.0f; baseDamage = 6; baseSpreadCount = 5; basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
             case WeaponType.Railgun:
-                fireRate = 0.5f; damage = 40; spreadCount = 1; pierceCount = 100; bounceCount = 0; explosive = false;
+                baseFireRate = 0.5f; baseDamage = 40; baseSpreadCount = 1; basePierceCount = 100; baseBounceCount = 0; baseExplosive = false;
                 break;
         }
     }
+
     public GameObject bulletPrefab;
     private ObjectPool<GameObject> bulletPool;
-    public float fireRate = 2.0f;
-    public float fireRateMultiplier = 1f;
-    public int damage = 5;
-    
-    public int spreadCount = 1;
-    public int pierceCount = 0;
-    public int bounceCount = 0;
-    public bool explosive = false;
-
     private float fireTimer = 0f;
 
     void Start()
@@ -59,25 +79,27 @@ public class Weapon : MonoBehaviour
         );
     }
 
-        void Update()
+    void Update()
     {
-        if (Keyboard.current.digit1Key.wasPressedThisFrame) { currentWeapon = WeaponType.Blaster; SetupWeapon(); }
-        if (Keyboard.current.digit2Key.wasPressedThisFrame) { currentWeapon = WeaponType.Shotgun; SetupWeapon(); }
-        if (Keyboard.current.digit3Key.wasPressedThisFrame) { currentWeapon = WeaponType.Railgun; SetupWeapon(); }
-        if (Time.timeScale == 0) return; // Pausado
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.digit1Key.wasPressedThisFrame) { currentWeapon = WeaponType.Blaster; SetupWeapon(); }
+            if (Keyboard.current.digit2Key.wasPressedThisFrame) { currentWeapon = WeaponType.Shotgun; SetupWeapon(); }
+            if (Keyboard.current.digit3Key.wasPressedThisFrame) { currentWeapon = WeaponType.Railgun; SetupWeapon(); }
+        }
+
+        if (Time.timeScale == 0) return;
         fireTimer -= Time.deltaTime;
 
         Vector2 aimInput = Vector2.zero;
         bool isAiming = false;
 
-        // 1. Tenta ler o Gamepad (Anal�gico Direito)
         if (Gamepad.current != null)
         {
             aimInput = Gamepad.current.rightStick.ReadValue();
             if (aimInput.sqrMagnitude > 0.1f) isAiming = true;
         }
 
-        // 2. Se n�o usou Gamepad, tenta ler o Mouse (Bot�o Esquerdo Pressionado)
         if (!isAiming && Mouse.current != null && Mouse.current.leftButton.isPressed)
         {
             Vector2 mousePos = Mouse.current.position.ReadValue();
@@ -89,11 +111,10 @@ public class Weapon : MonoBehaviour
             }
         }
 
-        // 3. Se estiver mirando e a arma estiver carregada, atira!
         if (isAiming && fireTimer <= 0f)
         {
             Shoot(aimInput);
-            fireTimer = 1f / (fireRate * fireRateMultiplier);
+            fireTimer = 1f / (baseFireRate * fireRateMultiplier);
         }
     }
 
@@ -109,10 +130,15 @@ public class Weapon : MonoBehaviour
 
         if (baseShootDir.sqrMagnitude < 0.01f) return;
 
-        float spreadAngle = 15f; // graus entre cada tiro
-        float startAngle = -spreadAngle * (spreadCount - 1) / 2f;
+        int activeSpread = spreadCount;
+        float spreadAngle = 15f;
+        float startAngle = -spreadAngle * (activeSpread - 1) / 2f;
 
-        for (int i = 0; i < spreadCount; i++)
+        bool rollCrit = Random.value < critChance;
+        int activeDamage = damage;
+        if (rollCrit) activeDamage = Mathf.RoundToInt(activeDamage * critMultiplier);
+
+        for (int i = 0; i < activeSpread; i++)
         {
             float angle = startAngle + i * spreadAngle;
             Vector3 shootDir = Quaternion.AngleAxis(angle, transform.up) * baseShootDir;
@@ -121,10 +147,11 @@ public class Weapon : MonoBehaviour
             Bullet bulletScript = bulletObj.GetComponent<Bullet>();
             
             if (bulletScript != null) {
-                bulletScript.damage = this.damage;
-                bulletScript.pierceCount = this.pierceCount;
-                bulletScript.bounceCount = this.bounceCount;
-                bulletScript.explosive = this.explosive;
+                bulletScript.damage = activeDamage;
+                bulletScript.isCritical = rollCrit;
+                bulletScript.pierceCount = pierceCount;
+                bulletScript.bounceCount = bounceCount;
+                bulletScript.explosive = explosive;
 
                 GravityBody gb = GetComponent<GravityBody>(); 
                 if (gb != null && gb.planet != null) {
@@ -138,38 +165,6 @@ public class Weapon : MonoBehaviour
             
             if (bulletScript != null) bulletScript.speed = 25f;
         }
-        // One sound for the whole volley, including spread upgrades.
-        if (spreadCount > 0) GameAudio.Play(AudioCue.Shot);
+        if (activeSpread > 0) GameAudio.Play(AudioCue.Shot);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

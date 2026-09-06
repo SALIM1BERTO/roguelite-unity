@@ -6,6 +6,7 @@ public class Bullet : MonoBehaviour
     public float speed = 40f;
     public float lifeTime = 2f;
     public int damage = 10;
+    public bool isCritical = false;
 
     public int pierceCount = 0;
     public int bounceCount = 0;
@@ -42,6 +43,7 @@ public class Bullet : MonoBehaviour
         timer = lifeTime;
         hasHit = false;
         released = false;
+        isCritical = false;
         hitCooldowns.Clear();
     }
 
@@ -119,7 +121,7 @@ public class Bullet : MonoBehaviour
             if (hitCooldowns.ContainsKey(enemy) && Time.time - hitCooldowns[enemy] < 0.2f) return;
             hitCooldowns[enemy] = Time.time;
 
-            enemy.TakeDamage(damage);
+            enemy.TakeDamage(damage, isCritical);
 
             if (explosive)
             {
@@ -130,7 +132,7 @@ public class Bullet : MonoBehaviour
                     if (e != null && e != enemy && (!hitCooldowns.ContainsKey(e) || Time.time - hitCooldowns[e] >= 0.2f))
                     {
                         hitCooldowns[e] = Time.time;
-                        e.TakeDamage(damage);
+                        e.TakeDamage(damage, false);
                     }
                 }
             }

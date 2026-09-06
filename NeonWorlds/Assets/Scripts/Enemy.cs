@@ -222,6 +222,11 @@ public class Enemy : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        TakeDamage(damage, false);
+    }
+
+    public void TakeDamage(int damage, bool isCrit)
+    {
         if (isDead || !isActiveAndEnabled || damage <= 0) return;
         
         hp -= damage;
@@ -254,10 +259,24 @@ public class Enemy : MonoBehaviour
         if (planet != null) txtObj.transform.SetParent(planet, true);
         FloatingText ft = txtObj.GetComponent<FloatingText>();
         if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        ft.Setup(damage.ToString());
+        if (isCrit)
+        {
+            ft.Setup("CRIT! " + damage, new Color(1f, 0.85f, 0.1f), 1.35f);
+        }
+        else
+        {
+            ft.Setup(damage.ToString());
+        }
 
         if (isDead)
         {
+            if (GameManager.Instance != null && GameManager.Instance.lifeStealChance > 0f)
+            {
+                if (Random.value < GameManager.Instance.lifeStealChance)
+                {
+                    GameManager.Instance.Heal(2);
+                }
+            }
             Die();
         }
     }
