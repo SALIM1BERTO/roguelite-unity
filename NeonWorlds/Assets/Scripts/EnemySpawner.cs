@@ -24,6 +24,7 @@ public class EnemySpawner : MonoBehaviour
 
     private float gameTimer = 0f;
     public bool bossSpawned = false;
+    public bool isBossActive = false;
 
     void Awake()
     {
@@ -93,11 +94,15 @@ public class EnemySpawner : MonoBehaviour
         // Increase difficulty over time: spawn interval decreases by 5% every 10 seconds (cap at 0.2f)
         float currentInterval = Mathf.Max(0.2f, spawnInterval * Mathf.Pow(0.95f, gameTimer / 10f));
         
-        timer -= Time.deltaTime;
-        if (timer <= 0f)
+        // Pause regular horde while Boss is active
+        if (!isBossActive)
         {
-            SpawnEnemy();
-            timer = currentInterval;
+            timer -= Time.deltaTime;
+            if (timer <= 0f)
+            {
+                SpawnEnemy();
+                timer = currentInterval;
+            }
         }
     }
 
@@ -105,6 +110,7 @@ public class EnemySpawner : MonoBehaviour
     {
         if (bossSpawned || currentPlanet == null || GameManager.Instance == null || GameManager.Instance.player == null) return;
         bossSpawned = true;
+        isBossActive = true;
 
         Vector3 playerPos = GameManager.Instance.player.position;
         Vector3 playerDir = (playerPos - currentPlanet.transform.position).normalized;

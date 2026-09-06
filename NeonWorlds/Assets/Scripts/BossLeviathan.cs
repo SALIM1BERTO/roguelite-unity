@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -34,6 +34,8 @@ public class BossLeviathan : MonoBehaviour
     private float novaTimer = 2f;
     private float dashCooldownTimer = 8f;
     private float spawnMinionsTimer = 6f;
+    private float antipodalTimer = 0f;
+    private bool isIntercepting = false;
 
     void Awake()
     {
@@ -55,6 +57,18 @@ public class BossLeviathan : MonoBehaviour
     void Start()
     {
         SetPhase(1);
+        Teleporter.LockAllTeleporters();
+
+        // Wipe surrounding mobs so player and boss duel cleanly
+        if (Enemy.activeEnemies != null)
+        {
+            List<Enemy> mobs = new List<Enemy>(Enemy.activeEnemies);
+            foreach (var m in mobs)
+            {
+                if (m != null && !m.isDead) m.TakeDamage(9999);
+            }
+        }
+
         if (RuntimeUIBuilder.Instance != null)
         {
             RuntimeUIBuilder.BuildBossHealthBar(this);
@@ -147,11 +161,76 @@ public class BossLeviathan : MonoBehaviour
         {
             ExecuteDash();
         }
+        else if (isIntercepting)
+        {
+            // Warping
+        }
         else
         {
             MoveTowardsPlayer(planarDir);
             HandleAttackTimers(planarDir, surfaceNormal);
+            CheckAntiKiting(player);
         }
+    }
+
+    void CheckAntiKiting(Transform player)
+    {
+        if (transform.parent == null) return;
+        Vector3 toPlayerNorm = (player.position - transform.parent.position).normalized;
+        Vector3 toSelfNorm = (transform.position - transform.parent.position).normalized;
+        float angularDist = Vector3.Angle(toSelfNorm, toPlayerNorm);
+
+        if (angularDist > 120f)
+        {
+            antipodalTimer += Time.deltaTime;
+            if (antipodalTimer >= 5f)
+            {
+                antipodalTimer = 0f;
+                StartCoroutine(HyperspaceIntercept(player));
+            }
+        }
+        else
+        {
+            antipodalTimer = Mathf.Max(0f, antipodalTimer - Time.deltaTime);
+        }
+    }
+
+    IEnumerator HyperspaceIntercept(Transform player)
+    {
+        isIntercepting = true;
+        GameAudio.Play(AudioCue.Teleport);
+
+        Vector3 origScale = coreTransform.localScale;
+        float t = 0f;
+        while (t < 0.4f)
+        {
+            t += Time.deltaTime;
+            coreTransform.localScale = Vector3.Lerp(origScale, Vector3.zero, t / 0.4f);
+            yield return null;
+        }
+
+        Vector3 playerForward = player.forward;
+        Vector3 surfaceNormal = (player.position - transform.parent.position).normalized;
+        Vector3 aheadDir = Vector3.ProjectOnPlane(playerForward, surfaceNormal).normalized;
+        if (aheadDir.sqrMagnitude < 0.01f) aheadDir = Vector3.Cross(surfaceNormal, Vector3.up).normalized;
+
+        float planetRadius = transform.parent.localScale.x * 0.5f;
+        Vector3 newPos = player.position + aheadDir * 8f;
+        Vector3 newNormal = (newPos - transform.parent.position).normalized;
+        transform.position = transform.parent.position + newNormal * (planetRadius + 0.8f);
+
+        t = 0f;
+        while (t < 0.3f)
+        {
+            t += Time.deltaTime;
+            coreTransform.localScale = Vector3.Lerp(Vector3.zero, origScale, t / 0.3f);
+            yield return null;
+        }
+        coreTransform.localScale = origScale;
+
+        FireRadialNova(newNormal);
+
+        isIntercepting = false;
     }
 
     void MoveTowardsPlayer(Vector3 planarDir)
@@ -412,6 +491,13 @@ public class BossLeviathan : MonoBehaviour
                     gemGb.planet = transform.parent.GetComponent<PlanetGravity>();
                 }
             }
+        }
+
+        // Unlock teleporters and resume game flow
+        Teleporter.UnlockAllTeleporters();
+        if (EnemySpawner.Instance != null)
+        {
+            EnemySpawner.Instance.isBossActive = false;
         }
 
         // Spawn guaranteed Drop Pod
