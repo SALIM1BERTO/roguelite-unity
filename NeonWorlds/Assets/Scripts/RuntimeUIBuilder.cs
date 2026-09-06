@@ -1,8 +1,163 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public static class RuntimeUIBuilder
 {
+    private static GameObject bossBarObj;
+    private static Image bossFillImg;
+    private static Text bossText;
+
+    public static void BuildBossHealthBar(BossLeviathan boss)
+    {
+        BuildBossHealthBarDirect(boss);
+    }
+
+    public static void BuildBossHealthBarDirect(BossLeviathan boss)
+    {
+        GameObject canvasObj = GameObject.Find("CanvasHUD");
+        if (canvasObj == null) return;
+
+        if (bossBarObj != null) Object.Destroy(bossBarObj);
+
+        bossBarObj = new GameObject("BossHealthBarContainer");
+        bossBarObj.transform.SetParent(canvasObj.transform, false);
+
+        RectTransform contRt = bossBarObj.AddComponent<RectTransform>();
+        contRt.anchorMin = new Vector2(0.2f, 0.88f);
+        contRt.anchorMax = new Vector2(0.8f, 0.94f);
+        contRt.sizeDelta = Vector2.zero;
+        contRt.anchoredPosition = Vector2.zero;
+
+        // Background
+        Image bg = bossBarObj.AddComponent<Image>();
+        bg.color = new Color(0.05f, 0.05f, 0.1f, 0.85f);
+        Outline outline = bossBarObj.AddComponent<Outline>();
+        outline.effectColor = new Color(1f, 0.2f, 0.4f, 0.8f);
+        outline.effectDistance = new Vector2(2, -2);
+
+        // Fill bar
+        GameObject fillObj = new GameObject("BossFill");
+        fillObj.transform.SetParent(bossBarObj.transform, false);
+        RectTransform fillRt = fillObj.AddComponent<RectTransform>();
+        fillRt.anchorMin = Vector2.zero;
+        fillRt.anchorMax = Vector2.one;
+        fillRt.sizeDelta = Vector2.zero;
+        fillRt.anchoredPosition = Vector2.zero;
+
+        bossFillImg = fillObj.AddComponent<Image>();
+        bossFillImg.color = new Color(0.9f, 0.15f, 0.35f, 1f);
+
+        // Text label
+        GameObject textObj = new GameObject("BossLabel");
+        textObj.transform.SetParent(bossBarObj.transform, false);
+        RectTransform textRt = textObj.AddComponent<RectTransform>();
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.sizeDelta = Vector2.zero;
+        textRt.anchoredPosition = Vector2.zero;
+
+        bossText = textObj.AddComponent<Text>();
+        bossText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        bossText.text = "LEVIATA ORBITAL - GUARDIÃO DO PLANETA";
+        bossText.fontSize = 18;
+        bossText.fontStyle = FontStyle.Bold;
+        bossText.alignment = TextAnchor.MiddleCenter;
+        bossText.color = Color.white;
+    }
+
+    public static void UpdateBossHP(int current, int max)
+    {
+        if (bossFillImg != null)
+        {
+            float pct = Mathf.Clamp01((float)current / max);
+            bossFillImg.rectTransform.anchorMax = new Vector2(pct, 1f);
+        }
+    }
+
+    public static void HideBossHealthBar()
+    {
+        if (bossBarObj != null)
+        {
+            Object.Destroy(bossBarObj);
+            bossBarObj = null;
+        }
+    }
+
+    public static void BuildVictoryUI(GameManager gm)
+    {
+        GameObject canvasObj = GameObject.Find("CanvasHUD");
+        if (canvasObj == null) return;
+
+        Time.timeScale = 0f;
+
+        GameObject panel = new GameObject("VictoryPanel");
+        panel.transform.SetParent(canvasObj.transform, false);
+        RectTransform panelRt = panel.AddComponent<RectTransform>();
+        panelRt.anchorMin = Vector2.zero; panelRt.anchorMax = Vector2.one;
+        panelRt.sizeDelta = Vector2.zero; panelRt.anchoredPosition = Vector2.zero;
+        
+        Image bg = panel.AddComponent<Image>();
+        bg.color = new Color(0.02f, 0.15f, 0.08f, 0.94f); // Verde neon escuro vitorioso
+
+        // Titulo
+        GameObject title = new GameObject("Title");
+        title.transform.SetParent(panel.transform, false);
+        RectTransform trt = title.AddComponent<RectTransform>();
+        trt.anchorMin = new Vector2(0f, 0.65f); trt.anchorMax = new Vector2(1f, 0.9f);
+        trt.sizeDelta = Vector2.zero; trt.anchoredPosition = Vector2.zero;
+        Text tText = title.AddComponent<Text>();
+        tText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        tText.text = "PLANETA PURIFICADO!\nO Leviata Foi Derrotado";
+        tText.fontSize = 38; tText.alignment = TextAnchor.MiddleCenter; tText.color = new Color(0.2f, 1f, 0.5f);
+
+        // Stats
+        GameObject stats = new GameObject("Stats");
+        stats.transform.SetParent(panel.transform, false);
+        RectTransform srt = stats.AddComponent<RectTransform>();
+        srt.anchorMin = new Vector2(0f, 0.4f); srt.anchorMax = new Vector2(1f, 0.6f);
+        srt.sizeDelta = Vector2.zero; srt.anchoredPosition = Vector2.zero;
+        Text sText = stats.AddComponent<Text>();
+        sText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        int minutes = Mathf.FloorToInt(gm.matchTime / 60F);
+        int seconds = Mathf.FloorToInt(gm.matchTime - minutes * 60);
+        sText.text = "Nivel Final: " + gm.level + "\nTempo de Conquista: " + string.Format("{0:00}:{1:00}", minutes, seconds);
+        sText.fontSize = 26; sText.alignment = TextAnchor.MiddleCenter; sText.color = Color.white;
+
+        // Botoes
+        GameObject btnCont = new GameObject("Buttons");
+        btnCont.transform.SetParent(panel.transform, false);
+        RectTransform brt = btnCont.AddComponent<RectTransform>();
+        brt.anchorMin = new Vector2(0.2f, 0.15f); brt.anchorMax = new Vector2(0.8f, 0.3f);
+        brt.sizeDelta = Vector2.zero; brt.anchoredPosition = Vector2.zero;
+        HorizontalLayoutGroup hlg = btnCont.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 40; hlg.childForceExpandWidth = true; hlg.childForceExpandHeight = true;
+
+        // Continuar / Reiniciar
+        GameObject playAgainBtn = new GameObject("PlayAgainBtn");
+        playAgainBtn.transform.SetParent(btnCont.transform, false);
+        Image rImg = playAgainBtn.AddComponent<Image>(); rImg.color = new Color(0.2f, 0.8f, 0.4f);
+        Button rBtn = playAgainBtn.AddComponent<Button>();
+        GameObject rTxtObj = new GameObject("Text"); rTxtObj.transform.SetParent(playAgainBtn.transform, false);
+        Text rTxt = rTxtObj.AddComponent<Text>(); rTxt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        rTxt.text = "JOGAR NOVAMENTE"; rTxt.alignment = TextAnchor.MiddleCenter; rTxt.color = Color.black; rTxt.fontSize = 22;
+        RectTransform rtr = rTxtObj.GetComponent<RectTransform>(); rtr.anchorMin = Vector2.zero; rtr.anchorMax = Vector2.one; rtr.sizeDelta = Vector2.zero;
+        rBtn.onClick.AddListener(() => { 
+            Time.timeScale = 1f;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name); 
+        });
+
+        // Sair
+        GameObject quitBtn = new GameObject("QuitBtn");
+        quitBtn.transform.SetParent(btnCont.transform, false);
+        Image qImg = quitBtn.AddComponent<Image>(); qImg.color = new Color(0.5f, 0.5f, 0.5f);
+        Button qBtn = quitBtn.AddComponent<Button>();
+        GameObject qTxtObj = new GameObject("Text"); qTxtObj.transform.SetParent(quitBtn.transform, false);
+        Text qTxt = qTxtObj.AddComponent<Text>(); qTxt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        qTxt.text = "SAIR"; qTxt.alignment = TextAnchor.MiddleCenter; qTxt.color = Color.white; qTxt.fontSize = 22;
+        RectTransform qtr = qTxtObj.GetComponent<RectTransform>(); qtr.anchorMin = Vector2.zero; qtr.anchorMax = Vector2.one; qtr.sizeDelta = Vector2.zero;
+        qBtn.onClick.AddListener(() => { Application.Quit(); });
+    }
+
     public static void BuildGameOverUI(GameManager gm)
     {
         GameObject canvasObj = GameObject.Find("CanvasHUD");
@@ -38,7 +193,7 @@ public static class RuntimeUIBuilder
         sText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         int minutes = Mathf.FloorToInt(gm.matchTime / 60F);
         int seconds = Mathf.FloorToInt(gm.matchTime - minutes * 60);
-        sText.text = "Nivel Alcan�ado: " + gm.level + "\nTempo Sobrevivido: " + string.Format("{0:00}:{1:00}", minutes, seconds);
+        sText.text = "Nivel Alcancado: " + gm.level + "\nTempo Sobrevivido: " + string.Format("{0:00}:{1:00}", minutes, seconds);
         sText.fontSize = 28; sText.alignment = TextAnchor.MiddleCenter; sText.color = Color.white;
 
         // Botoes Container
@@ -72,6 +227,7 @@ public static class RuntimeUIBuilder
         RectTransform qtr = qTxtObj.GetComponent<RectTransform>(); qtr.anchorMin = Vector2.zero; qtr.anchorMax = Vector2.one; qtr.sizeDelta = Vector2.zero;
         qBtn.onClick.AddListener(() => { Application.Quit(); });
     }
+
     public static void BuildLevelUpUI(GameManager gm)
     {
         GameObject canvasObj = GameObject.Find("CanvasHUD");
@@ -87,17 +243,17 @@ public static class RuntimeUIBuilder
         panelRt.sizeDelta = Vector2.zero; panelRt.anchoredPosition = Vector2.zero;
         
         Image bg = panel.AddComponent<Image>();
-        bg.color = new Color(0.02f, 0.02f, 0.05f, 0.95f); // Fundo escuro semi-transparente
+        bg.color = new Color(0.02f, 0.02f, 0.05f, 0.95f);
 
         // Titulo
         GameObject title = new GameObject("Title");
         title.transform.SetParent(panel.transform, false);
         Text titleTxt = title.AddComponent<Text>();
-        titleTxt.text = "SISTEMA OTIMIZADO"; // Clean title
+        titleTxt.text = "SISTEMA OTIMIZADO";
         titleTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         titleTxt.fontSize = 40;
         titleTxt.alignment = TextAnchor.MiddleCenter;
-        titleTxt.color = new Color(0f, 1f, 0.8f); // Neon Cyan
+        titleTxt.color = new Color(0f, 1f, 0.8f);
         RectTransform titleRt = title.GetComponent<RectTransform>();
         titleRt.anchorMin = new Vector2(0.5f, 0.85f); titleRt.anchorMax = new Vector2(0.5f, 0.95f);
         titleRt.sizeDelta = new Vector2(600, 80); titleRt.anchoredPosition = Vector2.zero;
@@ -124,11 +280,9 @@ public static class RuntimeUIBuilder
             GameObject card = new GameObject("Card_" + i);
             card.transform.SetParent(container.transform, false);
             
-            // Fundo do cartao (Discreto)
             Image cardImg = card.AddComponent<Image>();
             cardImg.color = new Color(0.1f, 0.1f, 0.15f, 1f); 
             
-            // Borda Neon (Simulada com um outline)
             Outline outline = card.AddComponent<Outline>();
             outline.effectColor = new Color(0f, 1f, 0.8f, 0.5f);
             outline.effectDistance = new Vector2(2, -2);
@@ -137,7 +291,6 @@ public static class RuntimeUIBuilder
             LayoutElement le = card.AddComponent<LayoutElement>();
             le.flexibleWidth = 1; le.flexibleHeight = 1; le.preferredWidth = 250; le.preferredHeight = 350;
 
-            // Icone (Texto grande)
             GameObject cIcon = new GameObject("Icon");
             cIcon.transform.SetParent(card.transform, false);
             Text ci = cIcon.AddComponent<Text>();
@@ -149,7 +302,6 @@ public static class RuntimeUIBuilder
             cir.anchorMin = new Vector2(0, 0.6f); cir.anchorMax = new Vector2(1, 0.95f);
             cir.offsetMin = Vector2.zero; cir.offsetMax = Vector2.zero;
 
-            // Titulo do Upgrade
             GameObject cTitle = new GameObject("Title");
             cTitle.transform.SetParent(card.transform, false);
             Text ct = cTitle.AddComponent<Text>();
@@ -162,7 +314,6 @@ public static class RuntimeUIBuilder
             ctr.anchorMin = new Vector2(0, 0.45f); ctr.anchorMax = new Vector2(1, 0.6f);
             ctr.offsetMin = new Vector2(10, 0); ctr.offsetMax = new Vector2(-10, 0);
 
-            // Descricao do Upgrade
             GameObject cDesc = new GameObject("Desc");
             cDesc.transform.SetParent(card.transform, false);
             Text cd = cDesc.AddComponent<Text>();
@@ -178,7 +329,6 @@ public static class RuntimeUIBuilder
             gm.upgradeTitles[i] = ct;
             gm.upgradeDescs[i] = cd;
             
-            // Salvando icone temporariamente no botao para GameManager usar
             btn.name = i.ToString(); 
         }
 
@@ -186,5 +336,3 @@ public static class RuntimeUIBuilder
         panel.SetActive(false);
     }
 }
-
-

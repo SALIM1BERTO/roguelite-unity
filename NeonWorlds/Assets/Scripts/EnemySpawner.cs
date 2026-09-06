@@ -23,6 +23,7 @@ public class EnemySpawner : MonoBehaviour
     public ObjectPool<GameObject> gemPool;
 
     private float gameTimer = 0f;
+    public bool bossSpawned = false;
 
     void Awake()
     {
@@ -78,6 +79,16 @@ public class EnemySpawner : MonoBehaviour
         if (standardPool == null) InitPools(); if (currentPlanet == null) return;
         
         gameTimer += Time.deltaTime;
+
+        // Boss trigger: 2:30 or Key 'B'
+        if (!bossSpawned)
+        {
+            bool pressB = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.bKey.wasPressedThisFrame;
+            if (gameTimer >= 150f || pressB)
+            {
+                SpawnBoss();
+            }
+        }
         
         // Increase difficulty over time: spawn interval decreases by 5% every 10 seconds (cap at 0.2f)
         float currentInterval = Mathf.Max(0.2f, spawnInterval * Mathf.Pow(0.95f, gameTimer / 10f));
@@ -88,6 +99,29 @@ public class EnemySpawner : MonoBehaviour
             SpawnEnemy();
             timer = currentInterval;
         }
+    }
+
+    public void SpawnBoss()
+    {
+        if (bossSpawned || currentPlanet == null || GameManager.Instance == null || GameManager.Instance.player == null) return;
+        bossSpawned = true;
+
+        Vector3 playerPos = GameManager.Instance.player.position;
+        Vector3 playerDir = (playerPos - currentPlanet.transform.position).normalized;
+        Vector3 spawnDir = -playerDir;
+
+        float radius = currentPlanet.transform.localScale.x * 0.5f;
+        Vector3 spawnPos = currentPlanet.transform.position + spawnDir * (radius + 0.8f);
+
+        GameObject bossObj = new GameObject("BossLeviathan");
+        bossObj.transform.position = spawnPos;
+        bossObj.transform.SetParent(currentPlanet.transform, true);
+
+        BossLeviathan boss = bossObj.AddComponent<BossLeviathan>();
+        GravityBody gb = bossObj.GetComponent<GravityBody>();
+        if (gb != null) gb.planet = currentPlanet;
+
+        GameAudio.Play(AudioCue.LevelUp);
     }
 
     void SpawnEnemy()

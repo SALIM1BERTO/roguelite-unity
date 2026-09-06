@@ -88,6 +88,31 @@ public class Bullet : MonoBehaviour
     void HandleHit(GameObject other)
     {
         if (released || !isActiveAndEnabled) return;
+
+        BossLeviathan boss = other.GetComponentInParent<BossLeviathan>();
+        if (boss != null)
+        {
+            boss.TakeDamage(damage);
+            GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
+            if (fxPrefab)
+            {
+                GameObject fx = Instantiate(fxPrefab, transform.position, Quaternion.identity);
+                if (planet != null) fx.transform.SetParent(planet, true);
+                Destroy(fx, 1f);
+            }
+
+            if (pierceCount > 0)
+            {
+                pierceCount--;
+            }
+            else
+            {
+                hasHit = true;
+                ReleaseProjectile();
+            }
+            return;
+        }
+
         Enemy enemy = other.GetComponentInParent<Enemy>();
         if (enemy != null)
         {
