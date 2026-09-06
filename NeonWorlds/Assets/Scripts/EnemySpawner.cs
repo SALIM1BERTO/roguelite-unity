@@ -117,17 +117,18 @@ public class EnemySpawner : MonoBehaviour
         Vector3 spawnDir = -playerDir;
 
         float radius = currentPlanet.transform.localScale.x * 0.5f;
-        Vector3 spawnPos = currentPlanet.transform.position + spawnDir * (radius + 0.8f);
+        Vector3 spawnPos = currentPlanet.transform.position + spawnDir * (radius + 3.8f);
 
-        GameObject bossObj = new GameObject("BossLeviathan");
-        bossObj.transform.position = spawnPos;
-        bossObj.transform.SetParent(currentPlanet.transform, true);
+        // Cinematic screen glitch, rumble, flash bang, and planetary shockwave
+        BossIntroSequence.StartSequence(spawnPos, currentPlanet, () => {
+            GameObject bossObj = new GameObject("BossLeviathan");
+            bossObj.transform.position = spawnPos;
+            bossObj.transform.SetParent(currentPlanet.transform, true);
 
-        BossLeviathan boss = bossObj.AddComponent<BossLeviathan>();
-        GravityBody gb = bossObj.GetComponent<GravityBody>();
-        if (gb != null) gb.planet = currentPlanet;
-
-        GameAudio.Play(AudioCue.LevelUp);
+            BossLeviathan boss = bossObj.AddComponent<BossLeviathan>();
+            GravityBody gb = bossObj.GetComponent<GravityBody>();
+            if (gb != null) gb.planet = currentPlanet;
+        });
     }
 
     void SpawnEnemy()

@@ -43,6 +43,7 @@ public class BossLeviathan : MonoBehaviour
     private float spawnMinionsTimer = 5f;
     private float antipodalTimer = 0f;
     private bool isIntercepting = false;
+    private bool isIntroDeploying = true;
 
     void Awake()
     {
@@ -72,6 +73,7 @@ public class BossLeviathan : MonoBehaviour
         WipeExistingMobsAndSummonEscort();
 
         RuntimeUIBuilder.BuildBossHealthBar(this);
+        StartCoroutine(IntroDeployAnimation());
     }
 
     void BuildVisuals()
@@ -184,6 +186,67 @@ public class BossLeviathan : MonoBehaviour
         }
     }
 
+    IEnumerator IntroDeployAnimation()
+    {
+        isIntroDeploying = true;
+
+        // Start compact & hidden
+        transform.localScale = Vector3.one * 0.1f;
+        if (innerRingPivot != null) innerRingPivot.localScale = Vector3.zero;
+        if (outerRingPivot != null) outerRingPivot.localScale = Vector3.zero;
+
+        // Blinding white singularity glow
+        coreMat.SetColor("_BaseColor", Color.white);
+        coreMat.SetColor("_EmissionColor", Color.white * 10f);
+
+        // Step 1: Core singularity eruption (overshoot bounce)
+        float t = 0f;
+        while (t < 0.45f)
+        {
+            t += Time.deltaTime;
+            float p = t / 0.45f;
+            float scale = Mathf.Lerp(0.1f, 1.2f, Mathf.Sin(p * Mathf.PI * 0.5f));
+            transform.localScale = Vector3.one * scale;
+            yield return null;
+        }
+
+        // Settle core scale
+        t = 0f;
+        while (t < 0.2f)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(Vector3.one * 1.2f, Vector3.one, t / 0.2f);
+            yield return null;
+        }
+        transform.localScale = Vector3.one;
+
+        // Step 2: Unfold armor plates & rings deploy with mechanical rotation
+        t = 0f;
+        while (t < 0.5f)
+        {
+            t += Time.deltaTime;
+            float p = t / 0.5f;
+            if (innerRingPivot != null) innerRingPivot.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, p);
+            if (outerRingPivot != null) outerRingPivot.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, p);
+            yield return null;
+        }
+        if (innerRingPivot != null) innerRingPivot.localScale = Vector3.one;
+        if (outerRingPivot != null) outerRingPivot.localScale = Vector3.one;
+
+        // Step 3: Transition to Electric Cyan
+        t = 0f;
+        while (t < 0.35f)
+        {
+            t += Time.deltaTime;
+            coreMat.SetColor("_BaseColor", Color.Lerp(Color.white, currentColor, t / 0.35f));
+            coreMat.SetColor("_EmissionColor", Color.Lerp(Color.white * 10f, currentColor * 3.5f, t / 0.35f));
+            yield return null;
+        }
+
+        GameAudio.Play(AudioCue.LevelUp);
+        isIntroDeploying = false;
+    }
+
     void WipeExistingMobsAndSummonEscort()
     {
         // 1. Wipe minor existing mobs
@@ -234,7 +297,7 @@ public class BossLeviathan : MonoBehaviour
 
     void Update()
     {
-        if (isDead) return;
+        if (isDead || isIntroDeploying) return;
 
         // Dual Gyroscopic Rotation
         float innerSpeed = currentPhase == 1 ? 50f : (currentPhase == 2 ? 110f : 200f);
