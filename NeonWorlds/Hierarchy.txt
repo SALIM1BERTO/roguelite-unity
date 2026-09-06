@@ -1,0 +1,10 @@
+Global Volume
+GlobalVolume
+EnemySpawner
+Player
+GameManager
+Canvas
+Sun
+Planeta
+Main Camera
+EventSystem
