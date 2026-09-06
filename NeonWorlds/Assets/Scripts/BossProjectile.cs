@@ -1,10 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class BossProjectile : MonoBehaviour
 {
-    public float speed = 18f;
-    public float lifeTime = 4.5f;
-    public int damage = 12;
+    public float speed = 22f;
+    public float lifeTime = 5.0f;
+    public int damage = 16;
     public Transform planet;
 
     private float timer;
@@ -32,7 +32,7 @@ public class BossProjectile : MonoBehaviour
         SphereCollider sc = GetComponent<SphereCollider>();
         if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
         sc.isTrigger = true;
-        sc.radius = 0.6f;
+        sc.radius = 0.8f;
     }
 
     void Update()
