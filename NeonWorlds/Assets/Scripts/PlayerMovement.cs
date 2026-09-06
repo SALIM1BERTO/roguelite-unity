@@ -26,14 +26,16 @@ public class PlayerMovement : MonoBehaviour
         ship.Configure();
     }
 
+    private Vector3 lastMouseWorldDir = Vector3.forward;
+    private bool isUsingGamepad = false;
+
     void Start()
     {
         mainCam = Camera.main;
+        lastMouseWorldDir = transform.forward;
         Transform tp = transform.Find("TrailParticles");
         if (tp != null) Destroy(tp.gameObject);
     }
-
-    private bool isUsingGamepad = false;
 
     void Update()
     {
@@ -102,14 +104,14 @@ public class PlayerMovement : MonoBehaviour
             Vector3 camRight = Vector3.ProjectOnPlane(mainCam.transform.right, transform.up).normalized;
             Vector3 camUp = Vector3.ProjectOnPlane(mainCam.transform.up, transform.up).normalized;
 
-            if (input.sqrMagnitude > 0.01f)
-            {
-                moveDir = (camForward * input.y + camRight * input.x).normalized;
-            }
-
-            // Cálculo da direção onde a nave deve mirar
             if (isUsingGamepad && Gamepad.current != null)
             {
+                // Modo Gamepad: movimentação analógica 360° pelo analógico esquerdo
+                if (input.sqrMagnitude > 0.01f)
+                {
+                    moveDir = (camForward * input.y + camRight * input.x).normalized;
+                }
+
                 Vector2 rStick = Gamepad.current.rightStick.ReadValue();
                 if (rStick.sqrMagnitude > 0.15f)
                 {
@@ -122,22 +124,35 @@ public class PlayerMovement : MonoBehaviour
             }
             else // Modo Mouse e Teclado
             {
+                // 1. O mouse define a direção 360° para onde o jogador quer ir
                 if (Mouse.current != null)
                 {
                     Vector2 mousePos = Mouse.current.position.ReadValue();
                     Vector2 playerScreenPos = mainCam.WorldToScreenPoint(transform.position);
                     Vector2 mouseDelta = mousePos - playerScreenPos;
 
-                    if (mouseDelta.sqrMagnitude > 25f) // Mais de 5 pixels de distância para evitar jitter
+                    if (mouseDelta.sqrMagnitude > 25f) // Evita jitter no centro do personagem
                     {
-                        targetFaceDir = (camRight * mouseDelta.normalized.x + camUp * mouseDelta.normalized.y).normalized;
+                        lastMouseWorldDir = (camRight * mouseDelta.normalized.x + camUp * mouseDelta.normalized.y).normalized;
                     }
                 }
 
-                if (targetFaceDir.sqrMagnitude < 0.001f && moveDir.sqrMagnitude > 0.01f)
+                if (lastMouseWorldDir.sqrMagnitude < 0.001f)
+                    lastMouseWorldDir = transform.forward;
+
+                Vector3 mouseRightDir = Vector3.Cross(transform.up, lastMouseWorldDir).normalized;
+
+                // 2. O teclado inicia a caminhada na direção apontada pelo mouse:
+                // - W: caminha para onde o mouse está mirando em 360° contínuos
+                // - S: recua (afastando-se do cursor do mouse)
+                // - D: strafe para a direita relativo à mira
+                // - A: strafe para a esquerda relativo à mira
+                if (input.sqrMagnitude > 0.01f)
                 {
-                    targetFaceDir = moveDir;
+                    moveDir = (lastMouseWorldDir * input.y + mouseRightDir * input.x).normalized;
                 }
+
+                targetFaceDir = lastMouseWorldDir;
             }
         }
 
