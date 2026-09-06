@@ -9,7 +9,7 @@ public class OrbitalMines : MonoBehaviour
     public int level = 0; // 0 = not unlocked, 1..5
     public float dropInterval = 3.5f;
     public int mineDamage = 35;
-    public float blastRadius = 3.5f;
+    public float blastRadius = 2.6f;
 
     private float timer = 0f;
 
@@ -46,14 +46,16 @@ public class OrbitalMines : MonoBehaviour
         Transform planet = (gb != null && gb.planet != null) ? gb.planet.transform : transform.parent;
         if (planet == null) return;
 
+        float pScale = planet.lossyScale.x > 0.001f ? planet.lossyScale.x : 1f;
+
         GameObject mine = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         mine.name = "VoidMine";
         mine.transform.position = transform.position;
         mine.transform.up = transform.up;
-        mine.transform.localScale = new Vector3(0.8f, 0.15f, 0.8f);
         mine.transform.SetParent(planet, true);
+        mine.transform.localScale = new Vector3(0.7f / pScale, 0.1f / pScale, 0.7f / pScale);
 
-        // Visuals
+        // Outer Material
         MeshRenderer mr = mine.GetComponent<MeshRenderer>();
         Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         Color mineColor = new Color(1f, 0f, 0.6f); // Neon Magenta
@@ -66,7 +68,7 @@ public class OrbitalMines : MonoBehaviour
         GameObject core = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         core.name = "MineCore";
         core.transform.SetParent(mine.transform, false);
-        core.transform.localPosition = new Vector3(0, 0.5f, 0);
+        core.transform.localPosition = new Vector3(0, 0.4f, 0);
         core.transform.localScale = new Vector3(0.5f, 1.2f, 0.5f);
         Destroy(core.GetComponent<Collider>());
         MeshRenderer coreMr = core.GetComponent<MeshRenderer>();
@@ -84,9 +86,9 @@ public class OrbitalMines : MonoBehaviour
 public class VoidMineLogic : MonoBehaviour
 {
     private int damage = 35;
-    private float blastRadius = 3.5f;
+    private float blastRadius = 2.6f;
     private Transform planet;
-    private float armTimer = 0.5f;
+    private float armTimer = 0.4f;
     private bool isArmed = false;
     private bool hasExploded = false;
     private float lifetime = 25f;
@@ -116,12 +118,8 @@ public class VoidMineLogic : MonoBehaviour
             return;
         }
 
-        // Pulse scale
-        float pulse = 1f + Mathf.PingPong(Time.time * 4f, 0.2f);
-        transform.localScale = new Vector3(0.8f * pulse, 0.15f, 0.8f * pulse);
-
         // Check distance to any enemy or boss
-        Collider[] colliders = Physics.OverlapSphere(transform.position, blastRadius * 0.7f);
+        Collider[] colliders = Physics.OverlapSphere(transform.position, blastRadius * 0.75f);
         for (int i = 0; i < colliders.Length; i++)
         {
             if (colliders[i].GetComponentInParent<Enemy>() != null || colliders[i].GetComponentInParent<BossLeviathan>() != null)
@@ -139,6 +137,21 @@ public class VoidMineLogic : MonoBehaviour
 
         GameAudio.Play(AudioCue.Explosion);
 
+        if (CameraShake.Instance != null)
+        {
+            CameraShake.Instance.TriggerShake(0.18f, 0.4f);
+        }
+
+        // Spawn particle shards if available
+        GameObject fxPrefab = Resources.Load<GameObject>("EnemyDeathFX");
+        if (fxPrefab != null)
+        {
+            GameObject pfx = Instantiate(fxPrefab, transform.position, Quaternion.identity);
+            if (planet != null) pfx.transform.SetParent(planet, true);
+            Destroy(pfx, 1f);
+        }
+
+        // Damage targets in radius
         Collider[] hits = Physics.OverlapSphere(transform.position, blastRadius);
         HashSet<Enemy> hitEnemies = new HashSet<Enemy>();
         for (int i = 0; i < hits.Length; i++)
@@ -157,37 +170,45 @@ public class VoidMineLogic : MonoBehaviour
             }
         }
 
-        GameObject fx = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        fx.name = "MineBlastFX";
-        fx.transform.position = transform.position;
-        if (planet != null) fx.transform.SetParent(planet, true);
-        Destroy(fx.GetComponent<Collider>());
-        MeshRenderer fxMr = fx.GetComponent<MeshRenderer>();
-        Material fxMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color fxColor = new Color(1f, 0.1f, 0.7f, 0.8f);
-        fxMat.SetColor("_BaseColor", fxColor);
-        fxMat.EnableKeyword("_EMISSION");
-        fxMat.SetColor("_EmissionColor", fxColor * 3f);
-        fxMr.material = fxMat;
+        // Create sleek expanding flat shockwave ring on surface
+        GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = "MineShockwaveRing";
+        ring.transform.position = transform.position + transform.up * 0.04f;
+        ring.transform.up = transform.up;
+        Destroy(ring.GetComponent<Collider>());
 
-        fx.AddComponent<MineExplosionFX>().Setup(blastRadius);
+        if (planet != null) ring.transform.SetParent(planet, true);
+
+        MeshRenderer mr = ring.GetComponent<MeshRenderer>();
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        Color ringColor = new Color(1f, 0.05f, 0.65f); // Neon Magenta
+        mat.SetColor("_BaseColor", ringColor);
+        mat.EnableKeyword("_EMISSION");
+        mat.SetColor("_EmissionColor", ringColor * 3.5f);
+        mr.material = mat;
+
+        float pScale = planet != null ? planet.lossyScale.x : 1f;
+        ring.AddComponent<MineShockwaveRing>().Setup(blastRadius, pScale, mat);
+
         Destroy(gameObject);
     }
 }
 
-public class MineExplosionFX : MonoBehaviour
+public class MineShockwaveRing : MonoBehaviour
 {
-    private float maxRadius = 4f;
+    private float maxWorldRadius = 2.6f;
+    private float planetScale = 1f;
+    private float duration = 0.22f;
     private float elapsed = 0f;
-    private float duration = 0.35f;
     private Material mat;
 
-    public void Setup(float radius)
+    public void Setup(float worldRadius, float pScale, Material m)
     {
-        maxRadius = radius;
-        MeshRenderer mr = GetComponent<MeshRenderer>();
-        if (mr != null) mat = mr.material;
-        transform.localScale = Vector3.one * 0.2f;
+        maxWorldRadius = Mathf.Min(worldRadius, 2.8f);
+        planetScale = Mathf.Max(0.001f, pScale);
+        mat = m;
+        float initialLocal = 0.2f / planetScale;
+        transform.localScale = new Vector3(initialLocal, 0.015f / planetScale, initialLocal);
     }
 
     void Update()
@@ -201,12 +222,18 @@ public class MineExplosionFX : MonoBehaviour
             return;
         }
 
-        transform.localScale = Vector3.one * (maxRadius * 2f * progress);
+        // Fast ease-out expansion
+        float ease = Mathf.Sin(progress * Mathf.PI * 0.5f);
+        float currentWorldDiameter = maxWorldRadius * 2f * ease;
+        float localDiameter = currentWorldDiameter / planetScale;
+        float localThickness = Mathf.Lerp(0.03f, 0.005f, progress) / planetScale;
+
+        transform.localScale = new Vector3(localDiameter, localThickness, localDiameter);
+
         if (mat != null)
         {
-            Color c = mat.GetColor("_BaseColor");
-            c.a = 1f - progress;
-            mat.SetColor("_BaseColor", c);
+            Color c = new Color(1f, 0.05f, 0.65f);
+            mat.SetColor("_EmissionColor", c * Mathf.Lerp(3.5f, 0f, progress));
         }
     }
 }
