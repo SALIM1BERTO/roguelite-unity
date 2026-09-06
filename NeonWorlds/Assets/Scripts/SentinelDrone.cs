@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -133,28 +133,65 @@ public class SentinelDrone : MonoBehaviour
         }
     }
 
+    Transform GetPlanet()
+    {
+        GravityBody gb = GetComponentInParent<GravityBody>();
+        if (gb != null && gb.planet != null) return gb.planet.transform;
+        if (transform.parent != null) return transform.parent;
+        PlanetGravity pg = FindAnyObjectByType<PlanetGravity>();
+        return pg != null ? pg.transform : null;
+    }
+
     IEnumerator LaserBurst(Vector3 fromPos, Transform target)
     {
         if (target == null) yield break;
 
-        Vector3 toTarget = (target.position - fromPos);
-        float dist = toTarget.magnitude;
-        Vector3 dir = toTarget.normalized;
+        Transform planet = GetPlanet();
+        Vector3 targetPos = target.position;
 
-        GameObject beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        beam.name = "DroneLaser";
-        beam.transform.position = fromPos + dir * (dist * 0.5f);
-        beam.transform.up = dir;
-        beam.transform.localScale = new Vector3(0.12f, dist * 0.5f, 0.12f);
-        Destroy(beam.GetComponent<Collider>());
+        GameObject beamObj = new GameObject("CurvedDroneLaser");
+        LineRenderer lr = beamObj.AddComponent<LineRenderer>();
+        lr.useWorldSpace = true;
+        lr.numCapVertices = 4;
+        lr.numCornerVertices = 4;
+        lr.startWidth = 0.15f;
+        lr.endWidth = 0.08f;
 
-        MeshRenderer mr = beam.GetComponent<MeshRenderer>();
         Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color c = new Color(0f, 1f, 0.8f);
-        mat.SetColor("_BaseColor", c);
+        Color laserColor = new Color(0f, 1f, 0.85f); // Neon Cyan
+        mat.SetColor("_BaseColor", laserColor);
         mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", c * 4f);
-        mr.material = mat;
+        mat.SetColor("_EmissionColor", laserColor * 4.5f);
+        lr.material = mat;
+
+        if (planet != null)
+        {
+            Vector3 center = planet.position;
+            Vector3 dirFrom = (fromPos - center).normalized;
+            Vector3 dirTo = (targetPos - center).normalized;
+
+            float rFrom = Vector3.Distance(fromPos, center);
+            float rTo = Vector3.Distance(targetPos, center);
+
+            float angle = Vector3.Angle(dirFrom, dirTo);
+            int segments = Mathf.Clamp(Mathf.CeilToInt(angle / 4f), 6, 28);
+            lr.positionCount = segments + 1;
+
+            for (int i = 0; i <= segments; i++)
+            {
+                float t = (float)i / segments;
+                Vector3 slerpedDir = Vector3.Slerp(dirFrom, dirTo, t);
+                float radius = Mathf.Lerp(rFrom, rTo, t);
+                Vector3 point = center + slerpedDir * radius;
+                lr.SetPosition(i, point);
+            }
+        }
+        else
+        {
+            lr.positionCount = 2;
+            lr.SetPosition(0, fromPos);
+            lr.SetPosition(1, targetPos);
+        }
 
         GameAudio.Play(AudioCue.Shot);
 
@@ -171,15 +208,27 @@ public class SentinelDrone : MonoBehaviour
             if (boss != null) boss.TakeDamage(dmg);
         }
 
-        float duration = 0.08f;
+        // Hit spark at target
+        GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
+        if (fxPrefab != null)
+        {
+            GameObject fx = Instantiate(fxPrefab, targetPos, Quaternion.identity);
+            if (planet != null) fx.transform.SetParent(planet, true);
+            Destroy(fx, 0.5f);
+        }
+
+        float duration = 0.12f;
         float elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
+            float progress = elapsed / duration;
+            lr.startWidth = Mathf.Lerp(0.15f, 0f, progress);
+            lr.endWidth = Mathf.Lerp(0.08f, 0f, progress);
             yield return null;
         }
 
         if (mat != null) Destroy(mat);
-        if (beam != null) Destroy(beam);
+        if (beamObj != null) Destroy(beamObj);
     }
 }
