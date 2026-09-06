@@ -69,14 +69,7 @@ public class BossLeviathan : MonoBehaviour
             }
         }
 
-        if (RuntimeUIBuilder.Instance != null)
-        {
-            RuntimeUIBuilder.BuildBossHealthBar(this);
-        }
-        else
-        {
-            RuntimeUIBuilder.BuildBossHealthBarDirect(this);
-        }
+        RuntimeUIBuilder.BuildBossHealthBar(this);
     }
 
     void BuildVisuals()
@@ -280,7 +273,7 @@ public class BossLeviathan : MonoBehaviour
 
     void FireRadialNova(Vector3 surfaceNormal)
     {
-        GameAudio.Play(AudioCue.Shoot);
+        GameAudio.Play(AudioCue.Shot);
         int projectileCount = currentPhase == 3 ? 16 : 12;
         float offsetAngle = (currentPhase == 3) ? Random.Range(0f, 30f) : 0f;
 
@@ -362,7 +355,7 @@ public class BossLeviathan : MonoBehaviour
         if (isDead || damage <= 0) return;
 
         hp -= damage;
-        GameAudio.PlayAt(AudioCue.Hit, transform.position, transform.parent);
+        GameAudio.PlayAt(AudioCue.Hit, transform.position, gravityBody != null ? gravityBody.planet : null);
 
         // Flash white
         StartCoroutine(DamageFlash());
