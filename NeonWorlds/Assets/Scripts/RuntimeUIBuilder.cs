@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public static class RuntimeUIBuilder
@@ -83,7 +83,7 @@ public static class RuntimeUIBuilder
         }
     }
 
-    public static void StyleUpgradeCard(Button btn, UpgradeRarity rarity)
+    public static void StyleUpgradeCard(Button btn, GameManager.UpgradeRarity rarity)
     {
         if (btn == null) return;
         Outline outline = btn.GetComponent<Outline>();
@@ -93,16 +93,16 @@ public static class RuntimeUIBuilder
 
         switch (rarity)
         {
-            case UpgradeRarity.Common:
+            case GameManager.UpgradeRarity.Common:
                 borderColor = new Color(0f, 0.9f, 0.8f);
                 break;
-            case UpgradeRarity.Rare:
+            case GameManager.UpgradeRarity.Rare:
                 borderColor = new Color(0.1f, 0.6f, 1f);
                 break;
-            case UpgradeRarity.Epic:
+            case GameManager.UpgradeRarity.Epic:
                 borderColor = new Color(0.85f, 0.15f, 1f);
                 break;
-            case UpgradeRarity.Legendary:
+            case GameManager.UpgradeRarity.Legendary:
                 borderColor = new Color(1f, 0.85f, 0.1f);
                 break;
         }

@@ -2,26 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public enum UpgradeRarity { Common, Rare, Epic, Legendary }
-
-public enum UpgradeType
-{
-    Spread,
-    FireRate,
-    Damage,
-    Speed,
-    Magnet,
-    Heal,
-    Pierce,
-    Bounce,
-    Critical,
-    Explosive,
-    OrbitalMines,
-    SentinelDrone,
-    AegisShield,
-    LifeSteal
-}
-
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
@@ -52,6 +32,26 @@ public class GameManager : MonoBehaviour
     public Button[] upgradeButtons;
     public Text[] upgradeTitles;
     public Text[] upgradeDescs;
+
+    public enum UpgradeRarity { Common, Rare, Epic, Legendary }
+
+    public enum UpgradeType
+    {
+        Spread,
+        FireRate,
+        Damage,
+        Speed,
+        Magnet,
+        Heal,
+        Pierce,
+        Bounce,
+        Critical,
+        Explosive,
+        OrbitalMines,
+        SentinelDrone,
+        AegisShield,
+        LifeSteal
+    }
 
     private UpgradeType[] currentUpgrades = new UpgradeType[3];
     public int xpToNextLevel = 100;
