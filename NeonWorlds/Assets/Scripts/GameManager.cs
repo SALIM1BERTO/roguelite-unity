@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 public class GameManager : MonoBehaviour
 {
@@ -532,6 +533,52 @@ public class GameManager : MonoBehaviour
         UpdateHPText();
     }
 
+    private Coroutine rumbleRoutine;
+
+    public void TriggerGamepadRumble(float lowFreq, float highFreq, float duration)
+    {
+        if (Gamepad.current == null) return;
+        if (rumbleRoutine != null) StopCoroutine(rumbleRoutine);
+        rumbleRoutine = StartCoroutine(RumbleRoutine(lowFreq, highFreq, duration));
+    }
+
+    private System.Collections.IEnumerator RumbleRoutine(float lowFreq, float highFreq, float duration)
+    {
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.SetMotorSpeeds(lowFreq, highFreq);
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.ResetHaptics();
+        }
+        rumbleRoutine = null;
+    }
+
+    void OnDisable()
+    {
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.ResetHaptics();
+        }
+    }
+
+    void OnApplicationQuit()
+    {
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.ResetHaptics();
+        }
+    }
+
     public void TakeDamage(int damage)
     {
         if (isInvincible || isGameOver) return;
@@ -539,10 +586,19 @@ public class GameManager : MonoBehaviour
         ShieldAegis shield = player != null ? player.GetComponent<ShieldAegis>() : null;
         if (shield != null && shield.TryAbsorbDamage())
         {
+            TriggerGamepadRumble(0.3f, 0.5f, 0.15f);
             return;
         }
 
-        if (damage > 0) GameAudio.Play(AudioCue.PlayerHit);
+        if (damage > 0)
+        {
+            GameAudio.Play(AudioCue.PlayerHit);
+            TriggerGamepadRumble(0.6f, 0.8f, 0.25f);
+            if (CameraShake.Instance != null)
+            {
+                CameraShake.Instance.TriggerShake(0.18f, 0.4f);
+            }
+        }
         hp -= damage;
         UpdateHPText();
         
@@ -556,6 +612,7 @@ public class GameManager : MonoBehaviour
     {
         isGameOver = true;
         Time.timeScale = 0f;
+        TriggerGamepadRumble(0.8f, 1.0f, 0.5f);
         RuntimeUIBuilder.BuildGameOverUI(this);
     }
 }
