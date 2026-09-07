@@ -28,7 +28,6 @@ public class Enemy : MonoBehaviour
 
     private static Material s_BgMat;
     private static Material s_FillMat;
-    private static GameObject s_DeathFxPrefab;
 
     public ObjectPool<GameObject> pool;
     public GameObject gemPrefab;
@@ -37,10 +36,13 @@ public class Enemy : MonoBehaviour
     private Material flashMat;
     private MeshRenderer meshR;
     private Coroutine flashRoutine;
+    private Coroutine deathRoutine;
     private GravityBody gravityBody;
+    private Vector3 originalScale = Vector3.one;
 
     void Awake()
     {
+        originalScale = transform.localScale;
         staggerOffset = UnityEngine.Random.Range(0, 3);
         gravityBody = GetComponent<GravityBody>();
         if (gravityBody != null)
@@ -102,6 +104,7 @@ public class Enemy : MonoBehaviour
         hp = maxHp;
         isDead = false;
         lastAttackTime = 0f;
+        transform.localScale = originalScale;
         RestoreMaterial();
         UpdateHealthBar();
         if (!activeEnemies.Contains(this))
@@ -115,6 +118,9 @@ public class Enemy : MonoBehaviour
         activeEnemies.Remove(this);
         if (flashRoutine != null) StopCoroutine(flashRoutine);
         flashRoutine = null;
+        if (deathRoutine != null) StopCoroutine(deathRoutine);
+        deathRoutine = null;
+        transform.localScale = originalScale;
         RestoreMaterial();
     }
 
@@ -292,7 +298,7 @@ public class Enemy : MonoBehaviour
         }
         else
         {
-            GameAudio.PlayAt(isDead ? AudioCue.Explosion : AudioCue.Hit, transform.position,
+            GameAudio.PlayAt(AudioCue.Hit, transform.position,
                 gravityBody != null ? gravityBody.planet : null);
         }
         UpdateHealthBar();
@@ -347,18 +353,44 @@ public class Enemy : MonoBehaviour
 
     void Die()
     {
-        Transform planet = gravityBody != null && gravityBody.planet != null ? gravityBody.planet.transform : transform.parent;
-        if (s_DeathFxPrefab == null)
+        if (deathRoutine != null) StopCoroutine(deathRoutine);
+        deathRoutine = StartCoroutine(DeathRoutine());
+    }
+
+    IEnumerator DeathRoutine()
+    {
+        isDead = true;
+        activeEnemies.Remove(this);
+        if (hpFill != null && hpFill.parent != null)
         {
-            s_DeathFxPrefab = Resources.Load<GameObject>("EnemyDeathFX");
-        }
-        if (s_DeathFxPrefab != null)
-        {
-            GameObject pfx = Instantiate(s_DeathFxPrefab, transform.position, Quaternion.identity);
-            if (planet != null) pfx.transform.SetParent(planet, true);
-            Destroy(pfx, 1f);
+            hpFill.parent.gameObject.SetActive(false);
         }
 
+        // Clean death animation: white neon flash + rapid squash into surface (no particles)
+        if (meshR != null && flashMat != null)
+        {
+            meshR.sharedMaterial = flashMat;
+        }
+
+        Vector3 baseScale = originalScale;
+        float duration = 0.14f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            // Squash & implode into ground: horizontal expands slightly, vertical flattens quickly
+            float horiz = Mathf.Lerp(1.15f, 0f, t * t);
+            float vert = Mathf.Lerp(1f, 0f, Mathf.Sqrt(t));
+            transform.localScale = new Vector3(baseScale.x * horiz, baseScale.y * vert, baseScale.z * horiz);
+            yield return null;
+        }
+
+        transform.localScale = baseScale;
+        RestoreMaterial();
+
+        // Spawn XP Gem
         if (GameManager.Instance != null && EnemySpawner.Instance != null && EnemySpawner.Instance.gemPool != null)
         {
             GameObject gem = EnemySpawner.Instance.gemPool.Get();
@@ -366,6 +398,8 @@ public class Enemy : MonoBehaviour
             if (gemGb != null) gemGb.planet = gravityBody != null ? gravityBody.planet : null;
             gem.transform.position = transform.position;
         }
+
+        deathRoutine = null;
 
         if (pool != null)
         {
