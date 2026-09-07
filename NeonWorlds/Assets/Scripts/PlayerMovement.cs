@@ -124,19 +124,11 @@ public class PlayerMovement : MonoBehaviour
 
             if (isUsingGamepad && Gamepad.current != null)
             {
-                // Modo Gamepad: movimentação analógica 360° pelo analógico esquerdo
+                // Modo Gamepad: movimentação analógica 360° pelo analógico esquerdo.
+                // O personagem vira para a direção em que está andando (analógico de movimento), NÃO para a mira.
                 if (input.sqrMagnitude > 0.01f)
                 {
                     moveDir = (camForward * input.y + camRight * input.x).normalized;
-                }
-
-                Vector2 rStick = Gamepad.current.rightStick.ReadValue();
-                if (rStick.sqrMagnitude > 0.15f)
-                {
-                    targetFaceDir = (camRight * rStick.normalized.x + camUp * rStick.normalized.y).normalized;
-                }
-                else if (moveDir.sqrMagnitude > 0.01f)
-                {
                     targetFaceDir = moveDir;
                 }
             }
@@ -228,7 +220,7 @@ public class PlayerMovement : MonoBehaviour
         if (targetFaceDir.sqrMagnitude > 0.001f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(targetFaceDir, transform.up);
-            float activeRotSpeed = (currentControlMode == ControlMode.Standard && !isUsingGamepad) ? rotationSpeed : Mathf.Max(rotationSpeed, 22f);
+            float activeRotSpeed = (currentControlMode == ControlMode.Standard || isUsingGamepad) ? rotationSpeed : Mathf.Max(rotationSpeed, 22f);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, activeRotSpeed * Time.deltaTime);
         }
 
