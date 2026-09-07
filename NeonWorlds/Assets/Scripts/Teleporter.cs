@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class Teleporter : MonoBehaviour
 {
@@ -121,6 +121,8 @@ public class Teleporter : MonoBehaviour
             
             Teleporter[] allTps = FindObjectsByType<Teleporter>(FindObjectsInactive.Exclude);
             foreach(var tp in allTps) tp.cooldown = 2f;
+
+            PlanetaryBiome.OnPlayerArrived(targetPlanet);
 
             Debug.Log("Teleportado para " + targetPlanet.name);
         }

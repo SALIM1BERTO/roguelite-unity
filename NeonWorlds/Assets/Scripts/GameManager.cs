@@ -89,12 +89,25 @@ public class GameManager : MonoBehaviour
         {
             MetaProgression.ApplyPermanentBuffs(this, player.GetComponent<PlayerMovement>(), player.GetComponent<Weapon>());
         }
+
+        GameObject startingPlanet = GameObject.Find("Planet_1");
+        if (startingPlanet != null)
+        {
+            PlanetaryBiome.OnPlayerArrived(startingPlanet.GetComponent<PlanetGravity>());
+        }
+
+        StartCarePackageScheduler();
     }
 
     public int GetUpgradeLevel(UpgradeType type)
     {
         if (upgradeLevels.ContainsKey(type)) return upgradeLevels[type];
         return 0;
+    }
+
+    public void SetUpgradeLevel(UpgradeType type, int level)
+    {
+        upgradeLevels[type] = level;
     }
 
     public bool IsLegendaryEvolution(UpgradeType type)
@@ -718,6 +731,10 @@ public class GameManager : MonoBehaviour
 
     public void AddXP(int amount)
     {
+        if (PlanetaryBiome.CurrentBiome != null)
+        {
+            amount = Mathf.RoundToInt(amount * PlanetaryBiome.CurrentBiome.xpMultiplier);
+        }
         xp += amount;
         while (xp >= xpToNextLevel)
         {
@@ -841,5 +858,97 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 0f;
         TriggerGamepadRumble(0.8f, 1.0f, 0.5f);
         RuntimeUIBuilder.BuildGameOverUI(this);
+    }
+
+    [Header("Frenzy State")]
+    public bool isFrenzyActive = false;
+    public float frenzyTimer = 0f;
+
+    void Update()
+    {
+        if (isFrenzyActive)
+        {
+            frenzyTimer -= Time.deltaTime;
+            RuntimeUIBuilder.UpdateFrenzyHUD(frenzyTimer);
+            if (frenzyTimer <= 0f)
+            {
+                isFrenzyActive = false;
+                frenzyTimer = 0f;
+                RuntimeUIBuilder.UpdateFrenzyHUD(0f);
+                if (player != null)
+                {
+                    Weapon w = player.GetComponent<Weapon>();
+                    if (w != null) w.fireRateMultiplier /= 2.0f;
+                }
+            }
+        }
+    }
+
+    public void TriggerFrenzy(float duration = 8f)
+    {
+        if (!isFrenzyActive)
+        {
+            isFrenzyActive = true;
+            if (player != null)
+            {
+                Weapon w = player.GetComponent<Weapon>();
+                if (w != null) w.fireRateMultiplier *= 2.0f;
+            }
+        }
+        frenzyTimer = Mathf.Max(frenzyTimer, duration);
+        RuntimeUIBuilder.UpdateFrenzyHUD(frenzyTimer);
+    }
+
+    private Coroutine carePackageCoroutine;
+
+    void StartCarePackageScheduler()
+    {
+        if (carePackageCoroutine != null) StopCoroutine(carePackageCoroutine);
+        carePackageCoroutine = StartCoroutine(CarePackageSchedulerRoutine());
+    }
+
+    IEnumerator CarePackageSchedulerRoutine()
+    {
+        yield return new WaitForSeconds(45f); // First supply drop after 45s
+        while (!isGameOver)
+        {
+            SpawnCarePackageOnCurrentPlanet();
+            yield return new WaitForSeconds(Random.Range(60f, 75f));
+        }
+    }
+
+    public void SpawnCarePackageOnCurrentPlanet()
+    {
+        PlanetGravity currentPlanet = null;
+        if (EnemySpawner.Instance != null && EnemySpawner.Instance.currentPlanet != null)
+        {
+            currentPlanet = EnemySpawner.Instance.currentPlanet;
+        }
+        else
+        {
+            GameObject p1 = GameObject.Find("Planet_1");
+            if (p1 != null) currentPlanet = p1.GetComponent<PlanetGravity>();
+        }
+
+        if (currentPlanet == null || player == null) return;
+
+        Transform pTrans = currentPlanet.transform;
+        Vector3 surfaceNormal = (player.position - pTrans.position).normalized;
+        Vector3 randomTangent = Vector3.ProjectOnPlane(Random.onUnitSphere, surfaceNormal).normalized;
+        if (randomTangent.sqrMagnitude < 0.01f) randomTangent = Vector3.Cross(surfaceNormal, Vector3.up).normalized;
+
+        float distance = Random.Range(10f, 22f);
+        Vector3 targetPos = player.position + randomTangent * distance;
+        Vector3 finalNormal = (targetPos - pTrans.position).normalized;
+        float radius = pTrans.localScale.x * 0.5f;
+        Vector3 spawnPos = pTrans.position + finalNormal * radius;
+
+        GameObject dropObj = new GameObject("CarePackageDrop");
+        dropObj.transform.position = spawnPos;
+        dropObj.transform.up = finalNormal;
+        dropObj.transform.SetParent(pTrans, true);
+
+        CarePackageDrop drop = dropObj.AddComponent<CarePackageDrop>();
+        drop.Setup(pTrans, finalNormal, pTrans.lossyScale.x);
     }
 }

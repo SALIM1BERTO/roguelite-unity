@@ -1132,4 +1132,136 @@ public static class RuntimeUIBuilder
                    $"<size=13><color=#ffd280><b>Receita:</b></color> <color=#ffffff>{recipe}</color></size>\n" +
                    $"<size=11><color=#b0c0d0>{effect}</color></size>";
     }
+
+    private static GameObject currentPlanetBanner;
+
+    public static void ShowPlanetBanner(string planetName, string hazardDesc, Color themeColor)
+    {
+        GameObject canvasObj = GameObject.Find("CanvasHUD");
+        if (canvasObj == null) return;
+
+        if (currentPlanetBanner != null) Object.Destroy(currentPlanetBanner);
+
+        GameObject banner = new GameObject("PlanetBanner");
+        currentPlanetBanner = banner;
+        banner.transform.SetParent(canvasObj.transform, false);
+
+        RectTransform rt = banner.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.2f, 0.86f);
+        rt.anchorMax = new Vector2(0.8f, 0.96f);
+        rt.sizeDelta = Vector2.zero;
+        rt.anchoredPosition = Vector2.zero;
+
+        Image bg = banner.AddComponent<Image>();
+        bg.color = new Color(0.04f, 0.06f, 0.12f, 0.94f);
+        Outline outl = banner.AddComponent<Outline>();
+        outl.effectColor = themeColor;
+        outl.effectDistance = new Vector2(2f, -2f);
+
+        CanvasGroup cg = banner.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+
+        GameObject txtObj = new GameObject("Text");
+        txtObj.transform.SetParent(banner.transform, false);
+        RectTransform trt = txtObj.AddComponent<RectTransform>();
+        trt.anchorMin = Vector2.zero;
+        trt.anchorMax = Vector2.one;
+        trt.sizeDelta = Vector2.zero;
+
+        Text txt = txtObj.AddComponent<Text>();
+        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        txt.alignment = TextAnchor.MiddleCenter;
+        string hex = ColorUtility.ToHtmlStringRGB(themeColor);
+        txt.text = $"<size=22><b><color=#{hex}>{planetName}</color></b></size>\n<size=13><color=#dddddd>{hazardDesc}</color></size>";
+
+        banner.AddComponent<BannerAnimator>();
+    }
+
+    private static GameObject frenzyBanner;
+
+    public static void UpdateFrenzyHUD(float remainingTime)
+    {
+        GameObject canvasObj = GameObject.Find("CanvasHUD");
+        if (canvasObj == null) return;
+
+        if (remainingTime <= 0f)
+        {
+            if (frenzyBanner != null) Object.Destroy(frenzyBanner);
+            frenzyBanner = null;
+            return;
+        }
+
+        if (frenzyBanner == null)
+        {
+            frenzyBanner = new GameObject("FrenzyHUD");
+            frenzyBanner.transform.SetParent(canvasObj.transform, false);
+            RectTransform rt = frenzyBanner.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.35f, 0.80f);
+            rt.anchorMax = new Vector2(0.65f, 0.85f);
+            rt.sizeDelta = Vector2.zero;
+            rt.anchoredPosition = Vector2.zero;
+
+            Image bg = frenzyBanner.AddComponent<Image>();
+            bg.color = new Color(0.12f, 0.08f, 0.02f, 0.9f);
+            Outline outl = frenzyBanner.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 0.85f, 0.1f);
+            outl.effectDistance = new Vector2(2f, -2f);
+
+            GameObject txtObj = new GameObject("Text");
+            txtObj.transform.SetParent(frenzyBanner.transform, false);
+            RectTransform trt = txtObj.AddComponent<RectTransform>();
+            trt.anchorMin = Vector2.zero;
+            trt.anchorMax = Vector2.one;
+            trt.sizeDelta = Vector2.zero;
+
+            Text txt = txtObj.AddComponent<Text>();
+            txt.name = "FrenzyText";
+            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.fontSize = 17;
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = new Color(1f, 0.9f, 0.2f);
+        }
+
+        Text fText = frenzyBanner.GetComponentInChildren<Text>();
+        if (fText != null)
+        {
+            fText.text = $"⚡ FRENESI CÓSMICO: {remainingTime:F1}s ⚡";
+        }
+    }
+}
+
+public class BannerAnimator : MonoBehaviour
+{
+    private CanvasGroup cg;
+
+    void Awake()
+    {
+        cg = GetComponent<CanvasGroup>();
+        StartCoroutine(AnimRoutine());
+    }
+
+    IEnumerator AnimRoutine()
+    {
+        float t = 0f;
+        while (t < 0.35f)
+        {
+            t += Time.unscaledDeltaTime;
+            if (cg != null) cg.alpha = Mathf.Clamp01(t / 0.35f);
+            yield return null;
+        }
+        if (cg != null) cg.alpha = 1f;
+
+        yield return new WaitForSecondsRealtime(3.2f);
+
+        t = 0f;
+        while (t < 0.45f)
+        {
+            t += Time.unscaledDeltaTime;
+            if (cg != null) cg.alpha = Mathf.Clamp01(1f - (t / 0.45f));
+            yield return null;
+        }
+
+        Destroy(gameObject);
+    }
 }

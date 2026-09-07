@@ -162,7 +162,7 @@ public static class MetaProgression
                         SentinelDrone drone = gm.player.GetComponent<SentinelDrone>();
                         if (drone == null) drone = gm.player.gameObject.AddComponent<SentinelDrone>();
                         drone.SetLevel(1);
-                        gm.upgrades[GameManager.UpgradeType.SentinelDrone] = 1;
+                        gm.SetUpgradeLevel(GameManager.UpgradeType.SentinelDrone, 1);
                     }
                 }
                 if (w != null)
