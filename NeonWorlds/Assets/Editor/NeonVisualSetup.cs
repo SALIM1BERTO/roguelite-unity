@@ -36,9 +36,6 @@ public static class NeonVisualSetup
         Material star=AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/NeonStars.mat");
         if(star==null) { star=new Material(Shader.Find("Universal Render Pipeline/Unlit")); AssetDatabase.CreateAsset(star,"Assets/Resources/NeonStars.mat"); }
         star.SetColor("_BaseColor",new Color(.35f,.46f,.65f)); star.SetFloat("_Cull",0); EditorUtility.SetDirty(star);
-        Material orbit=NeonMaterial("Assets/Materials/ModernOrbit.mat",new Color(.035f,.08f,.11f),.1f);
-        foreach(LineRenderer line in Object.FindObjectsByType<LineRenderer>())
-            if(line.name.StartsWith("OrbitLine")) { line.sharedMaterial=orbit; line.startWidth=.035f; line.endWidth=.035f; }
         PlayerShip ship=Object.FindAnyObjectByType<PlayerShip>();
         if(ship!=null)
         {

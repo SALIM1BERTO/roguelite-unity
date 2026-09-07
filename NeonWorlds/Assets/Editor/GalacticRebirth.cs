@@ -72,39 +72,10 @@ public class GalacticRebirthMenu
             pg.gravity = -12f;
             planets[i] = pg;
 
-            Orbit o = p.AddComponent<Orbit>();
-            o.center = sun.transform;
-            o.speed = speeds[i];
-
             Material pMat = new Material(baseMat);
             pMat.SetColor("_EmissionColor", colors[i] * 2f);
             AssetDatabase.CreateAsset(pMat, "Assets/Materials/MatGalacticPlanet_" + (i+1) + ".asset");
             p.GetComponent<MeshRenderer>().material = pMat;
-
-            // Criar anel visual da orbita no espaco
-            GameObject orbitLineObj = new GameObject("OrbitLine_" + (i+1));
-            orbitLineObj.transform.parent = sun.transform;
-            orbitLineObj.transform.localPosition = Vector3.zero;
-            
-            LineRenderer lr = orbitLineObj.AddComponent<LineRenderer>();
-            lr.useWorldSpace = false;
-            lr.loop = true;
-            lr.positionCount = 64; // Resolucao do circulo
-            lr.startWidth = 1f;
-            lr.endWidth = 1f;
-            lr.material = lineMat;
-            lr.startColor = colors[i] * 0.5f;
-            lr.endColor = colors[i] * 0.5f;
-
-            // Desenhar os pontos do circulo perfeito!
-            Vector3[] points = new Vector3[64];
-            float radius = dists[i] / 80f; // Escala relativa ao Sol (pois o Sol tem scale 80)
-            for (int j = 0; j < 64; j++)
-            {
-                float angle = j * Mathf.PI * 2f / 64f;
-                points[j] = new Vector3(Mathf.Cos(angle) * radius, 0, Mathf.Sin(angle) * radius);
-            }
-            lr.SetPositions(points);
         }
 
         // 5. Criar teleporters entre eles (1->2, 2->3, ..., 6->1)

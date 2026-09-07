@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 
 public class ReapplyAllFixes
@@ -12,27 +12,13 @@ public class ReapplyAllFixes
         // 2. Fix Trails Child
         FixTrailsChild.DoIt();
         
-        // 3. Reduce Speeds (manual implementation)
-        Orbit[] orbits = Object.FindObjectsByType<Orbit>(FindObjectsInactive.Exclude);
-        foreach(Orbit o in orbits)
-        {
-            if (Mathf.Abs(o.speed) > 5f) // only reduce if it's currently fast
-            {
-                o.speed = o.speed / 10f;
-                EditorUtility.SetDirty(o);
-            }
-        }
-        
-        // 4. Fix Death FX
+        // 3. Fix Death FX
         FixDeathFX.DoIt();
         
-        // 5. Create Teleport FX
+        // 4. Create Teleport FX
         CreateTeleportFX.DoIt();
-        
-        // 6. Fix Gem Prefab
-        // FixGemPrefab.DoIt();
 
-        // 7. Auto Setup Enemies
+        // 5. Auto Setup Enemies
         AutoSetupEnemies.DoIt();
         
         // SAVE SCENE
