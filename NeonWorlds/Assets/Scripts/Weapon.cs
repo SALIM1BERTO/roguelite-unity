@@ -208,6 +208,25 @@ public class Weapon : MonoBehaviour
             bulletObj.transform.position = transform.position + transform.up * 0.3f;
             bulletObj.transform.rotation = Quaternion.LookRotation(shootDir, transform.up);
         }
-        if (activeSpread > 0) GameAudio.Play(AudioCue.Shot);
+
+        if (activeSpread > 0)
+        {
+            if (currentWeapon == WeaponType.Blaster && isSupernova)
+            {
+                GameAudio.Play(AudioCue.SupernovaShot);
+            }
+            else if (currentWeapon == WeaponType.Shotgun && isNebulaFlak)
+            {
+                GameAudio.Play(AudioCue.NebulaShot);
+            }
+            else if (currentWeapon == WeaponType.Railgun && isAntimatterLance)
+            {
+                GameAudio.Play(AudioCue.AntimatterBeam);
+            }
+            else
+            {
+                GameAudio.Play(AudioCue.Shot);
+            }
+        }
     }
 }

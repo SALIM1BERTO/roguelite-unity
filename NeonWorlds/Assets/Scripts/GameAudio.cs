@@ -1,7 +1,24 @@
 using System;
 using UnityEngine;
 
-public enum AudioCue { Shot, Hit, Explosion, Pickup, LevelUp, Upgrade, PlayerHit, Teleport }
+public enum AudioCue
+{
+    Shot,
+    Hit,
+    Explosion,
+    Pickup,
+    LevelUp,
+    Upgrade,
+    PlayerHit,
+    Teleport,
+    SupernovaShot,
+    NebulaShot,
+    AntimatterBeam,
+    VoidVortexDrone,
+    TeslaArc,
+    HyperionPulse,
+    CriticalHit
+}
 
 /// <summary>Preallocated arcade SFX voices; independent of orbital speed and gameplay RNG.</summary>
 [DisallowMultipleComponent]
@@ -60,12 +77,13 @@ public class GameAudio : MonoBehaviour
             return;
         }
         GameObject prefab = Resources.Load<GameObject>("GameAudio");
-        if (prefab == null)
+        if (prefab != null)
         {
-            Debug.LogError("GameAudio prefab is missing from Resources. Run Tools/NeonWorlds/Audio/Create Audio Prefab.");
+            Instantiate(prefab).name = "GameAudio";
             return;
         }
-        Instantiate(prefab).name = "GameAudio";
+        GameObject audioObj = new GameObject("GameAudio");
+        audioObj.AddComponent<GameAudio>();
     }
 
     void Awake()
@@ -92,6 +110,30 @@ public class GameAudio : MonoBehaviour
             lookup[(int)sound.cue] = sound;
             if (sound.clip != null) sound.clip.LoadAudioData();
         }
+
+        // Procedural synthesis fallback for any cues not in the prefab
+        for (int i = 0; i < count; i++)
+        {
+            if (lookup[i] == null || lookup[i].clip == null)
+            {
+                AudioCue cue = (AudioCue)i;
+                AudioClip genClip = GenerateProceduralClip(cue);
+                if (genClip != null)
+                {
+                    lookup[i] = new Sound
+                    {
+                        cue = cue,
+                        clip = genClip,
+                        volume = GetDefaultVolume(cue),
+                        pitchVariation = 0.05f,
+                        minimumInterval = GetDefaultInterval(cue),
+                        importance = GetDefaultImportance(cue),
+                        interfaceSound = (cue == AudioCue.LevelUp || cue == AudioCue.Upgrade)
+                    };
+                }
+            }
+        }
+
         gameplayVoices = Mathf.Clamp(gameplayVoiceLimit, 4, 24);
         voices = new Voice[gameplayVoices + Mathf.Clamp(interfaceVoiceLimit, 1, 4)];
         for (int i = 0; i < voices.Length; i++)
@@ -107,6 +149,142 @@ public class GameAudio : MonoBehaviour
             voices[i] = new Voice { source = source };
         }
         gameplayPaused = Time.timeScale <= 0f;
+    }
+
+    static float GetDefaultVolume(AudioCue cue)
+    {
+        switch (cue)
+        {
+            case AudioCue.SupernovaShot: return 0.38f;
+            case AudioCue.NebulaShot: return 0.52f;
+            case AudioCue.AntimatterBeam: return 0.65f;
+            case AudioCue.VoidVortexDrone: return 0.55f;
+            case AudioCue.TeslaArc: return 0.45f;
+            case AudioCue.HyperionPulse: return 0.60f;
+            case AudioCue.CriticalHit: return 0.58f;
+            default: return 0.5f;
+        }
+    }
+
+    static float GetDefaultInterval(AudioCue cue)
+    {
+        switch (cue)
+        {
+            case AudioCue.SupernovaShot: return 0.035f;
+            case AudioCue.NebulaShot: return 0.06f;
+            case AudioCue.AntimatterBeam: return 0.1f;
+            case AudioCue.VoidVortexDrone: return 0.2f;
+            case AudioCue.TeslaArc: return 0.04f;
+            case AudioCue.HyperionPulse: return 0.15f;
+            case AudioCue.CriticalHit: return 0.05f;
+            default: return 0.04f;
+        }
+    }
+
+    static int GetDefaultImportance(AudioCue cue)
+    {
+        switch (cue)
+        {
+            case AudioCue.AntimatterBeam: return 85;
+            case AudioCue.HyperionPulse: return 80;
+            case AudioCue.CriticalHit: return 75;
+            case AudioCue.NebulaShot: return 65;
+            case AudioCue.SupernovaShot: return 60;
+            default: return 50;
+        }
+    }
+
+    AudioClip GenerateProceduralClip(AudioCue cue)
+    {
+        const int sampleRate = 44100;
+        float duration = 0.1f;
+        switch (cue)
+        {
+            case AudioCue.SupernovaShot: duration = 0.09f; break;
+            case AudioCue.NebulaShot: duration = 0.14f; break;
+            case AudioCue.AntimatterBeam: duration = 0.28f; break;
+            case AudioCue.VoidVortexDrone: duration = 0.40f; break;
+            case AudioCue.TeslaArc: duration = 0.08f; break;
+            case AudioCue.HyperionPulse: duration = 0.25f; break;
+            case AudioCue.CriticalHit: duration = 0.16f; break;
+            default: duration = 0.1f; break;
+        }
+
+        int sampleCount = Mathf.CeilToInt(sampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / sampleRate;
+            float progress = (float)i / sampleCount;
+            float sample = 0f;
+
+            switch (cue)
+            {
+                case AudioCue.SupernovaShot:
+                    // Rapid laser chirp: 1300Hz down to 550Hz with fast decay
+                    float freqSupernova = Mathf.Lerp(1300f, 550f, Mathf.Pow(progress, 0.7f));
+                    float envSupernova = Mathf.Exp(-progress * 7f);
+                    sample = Mathf.Sin(2f * Mathf.PI * freqSupernova * t) * envSupernova;
+                    break;
+
+                case AudioCue.NebulaShot:
+                    // Resonant cluster burst + noise transient
+                    float freqNebula = Mathf.Lerp(600f, 220f, progress);
+                    float toneNebula = Mathf.Sin(2f * Mathf.PI * freqNebula * t);
+                    float noiseNebula = (UnityEngine.Random.value * 2f - 1f) * 0.4f;
+                    float envNebula = Mathf.Exp(-progress * 6f);
+                    sample = (toneNebula * 0.6f + noiseNebula) * envNebula;
+                    break;
+
+                case AudioCue.AntimatterBeam:
+                    // Heavy sub-bass boom + high voltage saturation
+                    float freqBeam = Mathf.Lerp(160f, 42f, progress);
+                    float toneBeam = Mathf.Sin(2f * Mathf.PI * freqBeam * t) * 1.8f;
+                    sample = Mathf.Clamp(toneBeam, -0.95f, 0.95f) * Mathf.Exp(-progress * 4f);
+                    break;
+
+                case AudioCue.VoidVortexDrone:
+                    // Undulating gravitational hum with low LFO
+                    float lfo = 1f + 0.35f * Mathf.Sin(2f * Mathf.PI * 8f * t);
+                    float freqVortex = Mathf.Lerp(95f, 55f, progress) * lfo;
+                    sample = Mathf.Sin(2f * Mathf.PI * freqVortex * t) * (1f - progress);
+                    break;
+
+                case AudioCue.TeslaArc:
+                    // Sharp electric crackle / square pulse wave
+                    float freqTesla = UnityEngine.Random.Range(700f, 1800f);
+                    float sq = Mathf.Sign(Mathf.Sin(2f * Mathf.PI * freqTesla * t));
+                    float envTesla = Mathf.Exp(-progress * 12f);
+                    sample = sq * 0.7f * envTesla;
+                    break;
+
+                case AudioCue.HyperionPulse:
+                    // Resonant metallic electromagnetic shockwave
+                    float freqHyp = Mathf.Lerp(190f, 75f, progress);
+                    float bell = Mathf.Sin(2f * Mathf.PI * freqHyp * t) + 0.35f * Mathf.Sin(2f * Mathf.PI * freqHyp * 2.76f * t);
+                    sample = bell * Mathf.Exp(-progress * 5f);
+                    break;
+
+                case AudioCue.CriticalHit:
+                    // Harmonious crystalline chime (1500Hz + 2250Hz) with bell decay
+                    float tone1 = Mathf.Sin(2f * Mathf.PI * 1500f * t);
+                    float tone2 = Mathf.Sin(2f * Mathf.PI * 2250f * t);
+                    float envCrit = Mathf.Exp(-progress * 8f);
+                    sample = (tone1 * 0.55f + tone2 * 0.45f) * envCrit;
+                    break;
+
+                default:
+                    sample = Mathf.Sin(2f * Mathf.PI * 440f * t) * (1f - progress);
+                    break;
+            }
+
+            samples[i] = Mathf.Clamp(sample, -1f, 1f);
+        }
+
+        AudioClip clip = AudioClip.Create("SFX_" + cue, sampleCount, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
     }
 
     public static void Play(AudioCue cue)

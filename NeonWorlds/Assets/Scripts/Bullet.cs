@@ -120,7 +120,7 @@ public class Bullet : MonoBehaviour
         BossLeviathan boss = other.GetComponentInParent<BossLeviathan>();
         if (boss != null)
         {
-            boss.TakeDamage(damage);
+            boss.TakeDamage(damage, isCritical, isSupernova ? DamageTextStyle.Area : DamageTextStyle.Normal);
             GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
             if (fxPrefab)
             {
@@ -139,7 +139,7 @@ public class Bullet : MonoBehaviour
                     if (e != null && (!hitCooldowns.ContainsKey(e) || Time.time - hitCooldowns[e] >= 0.15f))
                     {
                         hitCooldowns[e] = Time.time;
-                        e.TakeDamage(Mathf.RoundToInt(damage * 0.65f), false);
+                        e.TakeDamage(Mathf.RoundToInt(damage * 0.65f), false, DamageTextStyle.Area);
                     }
                 }
             }
@@ -168,7 +168,7 @@ public class Bullet : MonoBehaviour
             if (hitCooldowns.ContainsKey(enemy) && Time.time - hitCooldowns[enemy] < 0.2f) return;
             hitCooldowns[enemy] = Time.time;
 
-            enemy.TakeDamage(damage, isCritical);
+            enemy.TakeDamage(damage, isCritical, isSupernova ? DamageTextStyle.Area : DamageTextStyle.Normal);
 
             if (isSupernova)
             {
@@ -179,7 +179,7 @@ public class Bullet : MonoBehaviour
                     if (e != null && e != enemy && (!hitCooldowns.ContainsKey(e) || Time.time - hitCooldowns[e] >= 0.15f))
                     {
                         hitCooldowns[e] = Time.time;
-                        e.TakeDamage(Mathf.RoundToInt(damage * 0.65f), false);
+                        e.TakeDamage(Mathf.RoundToInt(damage * 0.65f), false, DamageTextStyle.Area);
                     }
                 }
             }
@@ -199,7 +199,7 @@ public class Bullet : MonoBehaviour
                     if (e != null && e != enemy && (!hitCooldowns.ContainsKey(e) || Time.time - hitCooldowns[e] >= 0.2f))
                     {
                         hitCooldowns[e] = Time.time;
-                        e.TakeDamage(damage, false);
+                        e.TakeDamage(damage, false, DamageTextStyle.Area);
                     }
                 }
             }
@@ -354,10 +354,17 @@ public class NebulaShardLogic : MonoBehaviour
         Collider[] hits = Physics.OverlapSphere(transform.position, 0.7f);
         foreach (Collider c in hits)
         {
+            BossLeviathan boss = c.GetComponentInParent<BossLeviathan>();
+            if (boss != null)
+            {
+                boss.TakeDamage(damage, false, DamageTextStyle.Area);
+                Destroy(gameObject);
+                break;
+            }
             Enemy e = c.GetComponentInParent<Enemy>();
             if (e != null && !e.isDead)
             {
-                e.TakeDamage(damage, false);
+                e.TakeDamage(damage, false, DamageTextStyle.Area);
                 Destroy(gameObject);
                 break;
             }
@@ -386,10 +393,15 @@ public class AntimatterZoneLogic : MonoBehaviour
             Collider[] hits = Physics.OverlapSphere(transform.position, 1.8f);
             foreach (Collider c in hits)
             {
+                BossLeviathan boss = c.GetComponentInParent<BossLeviathan>();
+                if (boss != null)
+                {
+                    boss.TakeDamage(damage, false, DamageTextStyle.Area);
+                }
                 Enemy e = c.GetComponentInParent<Enemy>();
                 if (e != null && !e.isDead)
                 {
-                    e.TakeDamage(damage, false);
+                    e.TakeDamage(damage, false, DamageTextStyle.Area);
                 }
             }
         }

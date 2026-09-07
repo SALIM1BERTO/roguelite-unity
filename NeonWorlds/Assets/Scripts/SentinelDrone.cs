@@ -194,19 +194,26 @@ public class SentinelDrone : MonoBehaviour
             lr.SetPosition(1, targetPos);
         }
 
-        GameAudio.Play(AudioCue.Shot);
+        if (isTeslaChain)
+        {
+            GameAudio.Play(AudioCue.TeslaArc);
+        }
+        else
+        {
+            GameAudio.Play(AudioCue.Shot);
+        }
 
         // Apply damage
         int dmg = laserDamage + (level * 6);
         Enemy enemy = target.GetComponentInParent<Enemy>();
         if (enemy != null)
         {
-            enemy.TakeDamage(dmg, false);
+            enemy.TakeDamage(dmg, false, isTeslaChain ? DamageTextStyle.Electric : DamageTextStyle.Normal);
         }
         else
         {
             BossLeviathan boss = target.GetComponentInParent<BossLeviathan>();
-            if (boss != null) boss.TakeDamage(dmg);
+            if (boss != null) boss.TakeDamage(dmg, false, isTeslaChain ? DamageTextStyle.Electric : DamageTextStyle.Normal);
         }
 
         // Hit spark at target
@@ -300,7 +307,7 @@ public class SentinelDrone : MonoBehaviour
                 arcLr.SetPosition(s, p);
             }
 
-            nextTarget.TakeDamage(chainDmg, true);
+            nextTarget.TakeDamage(chainDmg, true, DamageTextStyle.Electric);
 
             GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
             if (fxPrefab != null)

@@ -163,13 +163,13 @@ public class VoidMineLogic : MonoBehaviour
             if (e != null && !hitEnemies.Contains(e))
             {
                 hitEnemies.Add(e);
-                e.TakeDamage(damage, true);
+                e.TakeDamage(damage, true, DamageTextStyle.Area);
             }
 
             BossLeviathan boss = hits[i].GetComponentInParent<BossLeviathan>();
             if (boss != null)
             {
-                boss.TakeDamage(damage);
+                boss.TakeDamage(damage, true, DamageTextStyle.Area);
             }
         }
 
@@ -254,6 +254,8 @@ public class VoidVortexSingularity : MonoBehaviour
         matRing.EnableKeyword("_EMISSION");
         matRing.SetColor("_EmissionColor", violet * 4f);
         mrRing.material = matRing;
+
+        GameAudio.Play(AudioCue.VoidVortexDrone);
     }
 
     void Update()
@@ -310,13 +312,13 @@ public class VoidVortexSingularity : MonoBehaviour
             if (e != null && !hitEnemies.Contains(e))
             {
                 hitEnemies.Add(e);
-                e.TakeDamage(implosionDamage, true);
+                e.TakeDamage(implosionDamage, true, DamageTextStyle.Area);
             }
 
             BossLeviathan boss = hits[i].GetComponentInParent<BossLeviathan>();
             if (boss != null)
             {
-                boss.TakeDamage(implosionDamage);
+                boss.TakeDamage(implosionDamage, true, DamageTextStyle.Area);
             }
         }
 

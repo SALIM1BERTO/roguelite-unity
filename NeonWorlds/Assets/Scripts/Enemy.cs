@@ -222,17 +222,30 @@ public class Enemy : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        TakeDamage(damage, false);
+        TakeDamage(damage, false, DamageTextStyle.Normal);
     }
 
     public void TakeDamage(int damage, bool isCrit)
+    {
+        TakeDamage(damage, isCrit, DamageTextStyle.Normal);
+    }
+
+    public void TakeDamage(int damage, bool isCrit, DamageTextStyle style)
     {
         if (isDead || !isActiveAndEnabled || damage <= 0) return;
         
         hp -= damage;
         isDead = hp <= 0;
-        GameAudio.PlayAt(isDead ? AudioCue.Explosion : AudioCue.Hit, transform.position,
-            gravityBody != null ? gravityBody.planet : null);
+        if (isCrit)
+        {
+            GameAudio.Play(AudioCue.CriticalHit);
+            HitStop.Trigger(0.04f, 0.05f);
+        }
+        else
+        {
+            GameAudio.PlayAt(isDead ? AudioCue.Explosion : AudioCue.Hit, transform.position,
+                gravityBody != null ? gravityBody.planet : null);
+        }
         UpdateHealthBar();
         
         if (meshR != null && flashMat != null && gameObject.activeInHierarchy) {
@@ -259,14 +272,7 @@ public class Enemy : MonoBehaviour
         if (planet != null) txtObj.transform.SetParent(planet, true);
         FloatingText ft = txtObj.GetComponent<FloatingText>();
         if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        if (isCrit)
-        {
-            ft.Setup("CRIT! " + damage, new Color(1f, 0.85f, 0.1f), 1.35f);
-        }
-        else
-        {
-            ft.Setup(damage.ToString());
-        }
+        ft.SetupDamage(damage, isCrit, style);
 
         if (isDead)
         {

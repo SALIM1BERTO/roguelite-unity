@@ -542,13 +542,31 @@ public class BossLeviathan : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        TakeDamage(damage, false, DamageTextStyle.Normal);
+    }
+
+    public void TakeDamage(int damage, bool isCrit)
+    {
+        TakeDamage(damage, isCrit, DamageTextStyle.Normal);
+    }
+
+    public void TakeDamage(int damage, bool isCrit, DamageTextStyle style)
+    {
         if (isDead || damage <= 0) return;
 
         hp -= damage;
-        GameAudio.PlayAt(AudioCue.Hit, transform.position, gravityBody != null ? gravityBody.planet : null);
+        if (isCrit)
+        {
+            GameAudio.Play(AudioCue.CriticalHit);
+            HitStop.Trigger(0.045f, 0.05f);
+        }
+        else
+        {
+            GameAudio.PlayAt(AudioCue.Hit, transform.position, gravityBody != null ? gravityBody.planet : null);
+        }
 
         StartCoroutine(DamageFlash());
-        SpawnDamageText(damage);
+        SpawnDamageText(damage, isCrit, style);
 
         RuntimeUIBuilder.UpdateBossHP(hp, maxHp);
 
@@ -605,7 +623,7 @@ public class BossLeviathan : MonoBehaviour
         }
     }
 
-    void SpawnDamageText(int damage)
+    void SpawnDamageText(int damage, bool isCrit = false, DamageTextStyle style = DamageTextStyle.Normal)
     {
         Vector3 surfaceNormal = transform.parent != null
             ? (transform.position - transform.parent.position).normalized : Vector3.up;
@@ -625,7 +643,7 @@ public class BossLeviathan : MonoBehaviour
         if (transform.parent != null) txtObj.transform.SetParent(transform.parent, true);
         FloatingText ft = txtObj.GetComponent<FloatingText>();
         if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        ft.Setup(damage.ToString());
+        ft.SetupDamage(damage, isCrit, style);
     }
 
     void Die()

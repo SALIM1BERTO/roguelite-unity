@@ -105,6 +105,8 @@ public class ShieldAegis : MonoBehaviour
 
     void TriggerHyperionPulse()
     {
+        GameAudio.Play(AudioCue.HyperionPulse);
+
         if (CameraShake.Instance != null)
         {
             CameraShake.Instance.TriggerShake(0.2f, 0.45f);
@@ -126,13 +128,13 @@ public class ShieldAegis : MonoBehaviour
             {
                 Vector3 knockDir = (enemy.transform.position - transform.position).normalized;
                 enemy.transform.position += knockDir * 2.5f;
-                enemy.TakeDamage(pulseDamage, true);
+                enemy.TakeDamage(pulseDamage, true, DamageTextStyle.Area);
             }
 
             BossLeviathan boss = col.GetComponentInParent<BossLeviathan>();
             if (boss != null)
             {
-                boss.TakeDamage(pulseDamage);
+                boss.TakeDamage(pulseDamage, true, DamageTextStyle.Area);
             }
         }
 
