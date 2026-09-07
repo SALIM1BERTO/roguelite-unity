@@ -467,11 +467,74 @@ public class GameManager : MonoBehaviour
             hpRt.anchorMin = new Vector2(0, 1); hpRt.anchorMax = new Vector2(0, 1);
             hpRt.pivot = new Vector2(0, 1); hpRt.anchoredPosition = new Vector2(0, 0);
             hpRt.sizeDelta = new Vector2(200, 40);
+
+            // Pause / Config Button in HUD
+            GameObject pauseBtnObj = RuntimeUIBuilder.CreateStyledButton(topHud.transform, "⚙ PAUSA [ESC]", new Color(0.12f, 0.16f, 0.28f, 0.9f), Color.cyan, () => {
+                TogglePauseMenu();
+            });
+            RectTransform pbrt = pauseBtnObj.GetComponent<RectTransform>();
+            pbrt.anchorMin = new Vector2(1, 0.5f); pbrt.anchorMax = new Vector2(1, 0.5f);
+            pbrt.pivot = new Vector2(1, 0.5f); pbrt.anchoredPosition = new Vector2(-10, 0);
+            pbrt.sizeDelta = new Vector2(140, 36);
+            Text pbt = pauseBtnObj.GetComponentInChildren<Text>();
+            if (pbt != null) { pbt.fontSize = 14; pbt.color = Color.cyan; }
+        }
+    }
+
+    public bool isPaused = false;
+    private GameObject pausePanel;
+
+    public void TogglePauseMenu()
+    {
+        if (isGameOver || (levelUpPanel != null && levelUpPanel.activeSelf)) return;
+
+        GameObject canvasObj = GameObject.Find("CanvasHUD");
+        if (canvasObj != null)
+        {
+            Transform hangar = canvasObj.transform.Find("HangarPanel");
+            if (hangar != null)
+            {
+                Destroy(hangar.gameObject);
+                return;
+            }
+        }
+
+        isPaused = !isPaused;
+        if (isPaused)
+        {
+            Time.timeScale = 0f;
+            GameAudio.SetGameplayPaused(true);
+            if (pausePanel == null)
+            {
+                pausePanel = RuntimeUIBuilder.BuildPauseMenu(this, () => TogglePauseMenu());
+            }
+            else
+            {
+                pausePanel.SetActive(true);
+                RuntimeUIBuilder.RefreshPauseMenuHighlights();
+            }
+        }
+        else
+        {
+            if (pausePanel != null) pausePanel.SetActive(false);
+            Time.timeScale = 1f;
+            GameAudio.SetGameplayPaused(false);
         }
     }
 
     void Update()
     {
+        bool pauseInput = false;
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            pauseInput = true;
+        if (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame)
+            pauseInput = true;
+
+        if (pauseInput)
+        {
+            TogglePauseMenu();
+        }
+
         if (Time.timeScale > 0)
         {
             matchTime += Time.deltaTime;

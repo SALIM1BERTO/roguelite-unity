@@ -2,8 +2,24 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public enum ControlMode
+{
+    Standard = 0,    // Clássico / Padrão: Nave vira para onde anda (WASD relativo à tela)
+    TwinStick = 1,   // Strafe / Twin-Stick: Nave mira no cursor do mouse, anda em WASD livre
+    MouseSteer = 2   // Guia pelo Mouse 360°: Mouse define a direção 360°, W anda para a frente
+}
+
 public class PlayerMovement : MonoBehaviour
 {
+    public static ControlMode currentControlMode = ControlMode.Standard;
+
+    public static void SetControlMode(ControlMode mode)
+    {
+        currentControlMode = mode;
+        PlayerPrefs.SetInt("Player_ControlMode", (int)mode);
+        PlayerPrefs.Save();
+    }
+
     public float moveSpeed = 12f;
     public float rotationSpeed = 15f;
     private Camera mainCam;
@@ -20,6 +36,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Awake()
     {
+        currentControlMode = (ControlMode)PlayerPrefs.GetInt("Player_ControlMode", (int)ControlMode.Standard);
+
         // Also migrates scenes that were open before the PlayerShip component was added.
         PlayerShip ship = GetComponent<PlayerShip>();
         if (ship == null) ship = gameObject.AddComponent<PlayerShip>();
@@ -142,17 +160,35 @@ public class PlayerMovement : MonoBehaviour
 
                 Vector3 mouseRightDir = Vector3.Cross(transform.up, lastMouseWorldDir).normalized;
 
-                // 2. O teclado inicia a caminhada na direção apontada pelo mouse:
-                // - W: caminha para onde o mouse está mirando em 360° contínuos
-                // - S: recua (afastando-se do cursor do mouse)
-                // - D: strafe para a direita relativo à mira
-                // - A: strafe para a esquerda relativo à mira
-                if (input.sqrMagnitude > 0.01f)
+                switch (currentControlMode)
                 {
-                    moveDir = (lastMouseWorldDir * input.y + mouseRightDir * input.x).normalized;
-                }
+                    case ControlMode.Standard:
+                        // Padrão Original: WASD move relativo à câmera na tela, a nave vira para onde anda
+                        if (input.sqrMagnitude > 0.01f)
+                        {
+                            moveDir = (camForward * input.y + camRight * input.x).normalized;
+                            targetFaceDir = moveDir;
+                        }
+                        break;
 
-                targetFaceDir = lastMouseWorldDir;
+                    case ControlMode.TwinStick:
+                        // Strafe Twin-Stick: WASD move livre relativo à tela, a nave mira no cursor do mouse
+                        if (input.sqrMagnitude > 0.01f)
+                        {
+                            moveDir = (camForward * input.y + camRight * input.x).normalized;
+                        }
+                        targetFaceDir = lastMouseWorldDir;
+                        break;
+
+                    case ControlMode.MouseSteer:
+                        // Guia 360° pelo Mouse: O mouse define a direção 360°, W caminha até o cursor
+                        if (input.sqrMagnitude > 0.01f)
+                        {
+                            moveDir = (lastMouseWorldDir * input.y + mouseRightDir * input.x).normalized;
+                        }
+                        targetFaceDir = lastMouseWorldDir;
+                        break;
+                }
             }
         }
 
@@ -188,11 +224,11 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // 1. Rotação suave e responsiva em direção à mira (mouse ou analógico direito)
+        // 1. Rotação suave em direção ao alvo
         if (targetFaceDir.sqrMagnitude > 0.001f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(targetFaceDir, transform.up);
-            float activeRotSpeed = Mathf.Max(rotationSpeed, 22f);
+            float activeRotSpeed = (currentControlMode == ControlMode.Standard && !isUsingGamepad) ? rotationSpeed : Mathf.Max(rotationSpeed, 22f);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, activeRotSpeed * Time.deltaTime);
         }
 

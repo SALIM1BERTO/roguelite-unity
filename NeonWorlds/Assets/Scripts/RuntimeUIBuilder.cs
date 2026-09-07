@@ -547,4 +547,181 @@ public static class RuntimeUIBuilder
         gm.levelUpPanel = panel;
         panel.SetActive(false);
     }
+
+    public static GameObject pauseMenuPanel;
+    private static Button[] modeButtons;
+    private static Image[] modeBackgrounds;
+    private static Outline[] modeOutlines;
+
+    public static GameObject BuildPauseMenu(GameManager gm, System.Action onResume)
+    {
+        GameObject canvasObj = GameObject.Find("CanvasHUD");
+        if (canvasObj == null) return null;
+
+        Transform existing = canvasObj.transform.Find("PauseMenuPanel");
+        if (existing != null) Object.Destroy(existing.gameObject);
+
+        GameObject panel = new GameObject("PauseMenuPanel");
+        panel.transform.SetParent(canvasObj.transform, false);
+        RectTransform panelRt = panel.AddComponent<RectTransform>();
+        panelRt.anchorMin = new Vector2(0.12f, 0.08f);
+        panelRt.anchorMax = new Vector2(0.88f, 0.92f);
+        panelRt.sizeDelta = Vector2.zero;
+        panelRt.anchoredPosition = Vector2.zero;
+
+        Image bg = panel.AddComponent<Image>();
+        bg.color = new Color(0.03f, 0.04f, 0.09f, 0.97f);
+        Outline outl = panel.AddComponent<Outline>();
+        outl.effectColor = new Color(0.2f, 0.7f, 1f, 0.85f);
+        outl.effectDistance = new Vector2(3, -3);
+
+        // Header
+        GameObject header = new GameObject("Header");
+        header.transform.SetParent(panel.transform, false);
+        RectTransform hrt = header.AddComponent<RectTransform>();
+        hrt.anchorMin = new Vector2(0f, 0.86f); hrt.anchorMax = new Vector2(1f, 0.98f);
+        hrt.sizeDelta = Vector2.zero; hrt.anchoredPosition = Vector2.zero;
+        Text hText = header.AddComponent<Text>();
+        hText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        hText.text = "PAUSA / CONFIGURAÇÕES";
+        hText.fontSize = 28;
+        hText.fontStyle = FontStyle.Bold;
+        hText.alignment = TextAnchor.MiddleCenter;
+        hText.color = new Color(0f, 0.95f, 1f);
+
+        // Subtitle / Section title
+        GameObject sectionObj = new GameObject("SectionTitle");
+        sectionObj.transform.SetParent(panel.transform, false);
+        RectTransform srt = sectionObj.AddComponent<RectTransform>();
+        srt.anchorMin = new Vector2(0.05f, 0.76f); srt.anchorMax = new Vector2(0.95f, 0.85f);
+        srt.sizeDelta = Vector2.zero; srt.anchoredPosition = Vector2.zero;
+        Text sText = sectionObj.AddComponent<Text>();
+        sText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        sText.text = "MODO DE CONTROLE (TECLADO & MOUSE)";
+        sText.fontSize = 18;
+        sText.fontStyle = FontStyle.Bold;
+        sText.alignment = TextAnchor.MiddleCenter;
+        sText.color = new Color(0.85f, 0.9f, 1f);
+
+        // Options Container (Horizontal)
+        GameObject optionsCont = new GameObject("OptionsContainer");
+        optionsCont.transform.SetParent(panel.transform, false);
+        RectTransform ort = optionsCont.AddComponent<RectTransform>();
+        ort.anchorMin = new Vector2(0.04f, 0.28f); ort.anchorMax = new Vector2(0.96f, 0.74f);
+        ort.sizeDelta = Vector2.zero; ort.anchoredPosition = Vector2.zero;
+        HorizontalLayoutGroup hlg = optionsCont.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 18;
+        hlg.childControlWidth = true; hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = true; hlg.childForceExpandHeight = true;
+
+        modeButtons = new Button[3];
+        modeBackgrounds = new Image[3];
+        modeOutlines = new Outline[3];
+
+        for (int i = 0; i < 3; i++)
+        {
+            int modeIdx = i;
+            GameObject optCard = new GameObject("ModeCard_" + i);
+            optCard.transform.SetParent(optionsCont.transform, false);
+
+            Image cardBg = optCard.AddComponent<Image>();
+            Outline cardOutl = optCard.AddComponent<Outline>();
+            Button btn = optCard.AddComponent<Button>();
+
+            modeButtons[i] = btn;
+            modeBackgrounds[i] = cardBg;
+            modeOutlines[i] = cardOutl;
+
+            // Text inside card
+            GameObject txtObj = new GameObject("Text");
+            txtObj.transform.SetParent(optCard.transform, false);
+            RectTransform trt = txtObj.AddComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0.05f, 0.05f); trt.anchorMax = new Vector2(0.95f, 0.95f);
+            trt.sizeDelta = Vector2.zero; trt.anchoredPosition = Vector2.zero;
+            Text txt = txtObj.AddComponent<Text>();
+            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.alignment = TextAnchor.MiddleCenter;
+
+            btn.onClick.AddListener(() => {
+                PlayerMovement.SetControlMode((ControlMode)modeIdx);
+                GameAudio.Play(AudioCue.Upgrade);
+                RefreshPauseMenuHighlights();
+            });
+        }
+
+        RefreshPauseMenuHighlights();
+
+        // Bottom Action Buttons Container
+        GameObject btnCont = new GameObject("ActionButtons");
+        btnCont.transform.SetParent(panel.transform, false);
+        RectTransform brt = btnCont.AddComponent<RectTransform>();
+        brt.anchorMin = new Vector2(0.06f, 0.08f); brt.anchorMax = new Vector2(0.94f, 0.22f);
+        brt.sizeDelta = Vector2.zero; brt.anchoredPosition = Vector2.zero;
+        HorizontalLayoutGroup bhlg = btnCont.AddComponent<HorizontalLayoutGroup>();
+        bhlg.spacing = 20;
+        bhlg.childForceExpandWidth = true; bhlg.childForceExpandHeight = true;
+
+        CreateStyledButton(btnCont.transform, "CONTINUAR [ESC]", new Color(0.15f, 0.7f, 0.35f), Color.black, () => {
+            if (onResume != null) onResume();
+        });
+
+        CreateStyledButton(btnCont.transform, "HANGAR", new Color(0.15f, 0.55f, 0.95f), Color.white, () => {
+            BuildHangarUI(canvasObj.transform);
+        });
+
+        CreateStyledButton(btnCont.transform, "REINICIAR", new Color(0.9f, 0.5f, 0.1f), Color.black, () => {
+            Time.timeScale = 1f;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        });
+
+        CreateStyledButton(btnCont.transform, "SAIR", new Color(0.45f, 0.45f, 0.55f), Color.white, () => {
+            Application.Quit();
+        });
+
+        pauseMenuPanel = panel;
+        return panel;
+    }
+
+    public static void RefreshPauseMenuHighlights()
+    {
+        if (modeButtons == null) return;
+        ControlMode current = PlayerMovement.currentControlMode;
+
+        string[] titles = {
+            "PADRÃO (WASD)",
+            "STRAFE (TWIN-STICK)",
+            "GUIA 360° PELO MOUSE"
+        };
+
+        string[] descs = {
+            "<b>Modo Clássico Original:</b>\n\n• WASD move a nave pela tela.\n• A nave vira para onde anda.\n• O mouse mira os tiros.",
+            "<b>Modo Twin-Stick Shooter:</b>\n\n• WASD move a nave livremente.\n• A proa mira sempre no mouse.\n• Permite strafe 360° total.",
+            "<b>Direção 360° Contínua:</b>\n\n• O mouse define a direção 360°.\n• A tecla W caminha até o cursor.\n• Permite curvas e navegação fluida."
+        };
+
+        for (int i = 0; i < modeButtons.Length; i++)
+        {
+            if (modeButtons[i] == null) continue;
+            bool isSelected = ((int)current == i);
+
+            Text txt = modeButtons[i].GetComponentInChildren<Text>();
+            if (txt != null)
+            {
+                string status = isSelected ? "<color=#00ffcc><b>[ ATIVO ]</b></color>\n\n" : "<color=#888888>[ SELECIONAR ]</color>\n\n";
+                string titleColor = isSelected ? "#00ffff" : "#cccccc";
+                txt.text = $"{status}<size=18><color={titleColor}><b>{titles[i]}</b></color></size>\n\n<size=13><color=#dddddd>{descs[i]}</color></size>";
+            }
+
+            if (modeBackgrounds[i] != null)
+            {
+                modeBackgrounds[i].color = isSelected ? new Color(0.08f, 0.16f, 0.26f, 0.98f) : new Color(0.06f, 0.08f, 0.12f, 0.9f);
+            }
+
+            if (modeOutlines[i] != null)
+            {
+                modeOutlines[i].effectColor = isSelected ? new Color(0f, 1f, 0.85f, 1f) : new Color(0.2f, 0.25f, 0.35f, 0.6f);
+                modeOutlines[i].effectDistance = isSelected ? new Vector2(3f, -3f) : new Vector2(1.5f, -1.5f);
+            }
+        }
+    }
 }
