@@ -150,7 +150,7 @@ public class PlanetaryBiome : MonoBehaviour
         isOverloaded = true;
         
         // Spawn dynamic teleporter near player
-        PlanetGravity[] allPlanets = FindObjectsByType<PlanetGravity>(FindObjectsSortMode.None);
+        PlanetGravity[] allPlanets = FindObjectsByType<PlanetGravity>(FindObjectsInactive.Exclude);
         PlanetGravity nextPlanet = null;
         List<PlanetGravity> validPlanets = new List<PlanetGravity>();
         foreach (var p in allPlanets) {
@@ -164,23 +164,10 @@ public class PlanetaryBiome : MonoBehaviour
         Vector3 spawnPos = GetSurfacePointNearPlayer(8f, 12f);
         Vector3 upNormal = (spawnPos - transform.position).normalized;
 
-        GameObject portalObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        portalObj.name = "EscapeTeleporter";
+        GameObject portalObj = new GameObject("EscapeTeleporter");
         portalObj.transform.position = spawnPos;
         portalObj.transform.up = upNormal;
         portalObj.transform.SetParent(transform, true);
-        portalObj.transform.localScale = new Vector3(3f, 0.1f, 3f);
-        
-        Collider col = portalObj.GetComponent<Collider>();
-        col.isTrigger = true;
-
-        MeshRenderer mr = portalObj.GetComponent<MeshRenderer>();
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color portalCol = new Color(0.2f, 1f, 0.5f);
-        mat.SetColor("_BaseColor", Color.black);
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", portalCol * 4f);
-        mr.material = mat;
 
         Teleporter tp = portalObj.AddComponent<Teleporter>();
         tp.targetPlanet = nextPlanet;
@@ -389,11 +376,6 @@ public class MagmaGeyserLogic : MonoBehaviour
 
             BossLeviathan b = col.GetComponentInParent<BossLeviathan>();
             if (b != null) b.TakeDamage(45, true, DamageTextStyle.Area);
-
-            if (col.CompareTag("Player") || col.GetComponentInParent<PlayerMovement>() != null)
-            {
-                if (GameManager.Instance != null) GameManager.Instance.TakeDamage(12);
-            }
         }
 
         yield return new WaitForSeconds(0.6f);

@@ -75,6 +75,7 @@
     <Compile Include="Assets\Editor\AutoRunEnemies.cs" />
     <Compile Include="Assets\Editor\Phase2BiomeChecks.cs" />
     <Compile Include="Assets\Editor\ScaleDownPlayerOnLoad.cs" />
+    <Compile Include="Assets\Editor\InputModuleSetup.cs" />
     <Compile Include="Assets\Editor\ReapplyAllFixes.cs" />
     <Compile Include="Assets\Editor\ShipChassisChecks.cs" />
     <Compile Include="Assets\Editor\AutoSetupEnemies.cs" />
