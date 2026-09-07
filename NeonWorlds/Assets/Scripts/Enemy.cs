@@ -12,6 +12,7 @@ public class Enemy : MonoBehaviour
     public int maxHp = 30; 
     public int baseHp = -1;
     public float speed = 3f;
+    public float baseSpeed = -1f;
     public bool isDead = false;
 
     [Header("Attack Settings")]

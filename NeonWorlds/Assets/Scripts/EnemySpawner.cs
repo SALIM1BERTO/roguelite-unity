@@ -204,9 +204,8 @@ public class EnemySpawner : MonoBehaviour
             e.maxHp = (int)(e.baseHp * hpMultiplier);
             e.hp = e.maxHp;
             
-            // Assuming base speed is e.speed (we need a way to store baseSpeed if modified, but let's just scale directly on spawn if not compounding)
-            if (e.GetComponent<EnemyMove>() == null) // Assuming simple logic, speed is usually constant per prefab.
-                e.speed = e.speed * speedMultiplier;
+            if (e.baseSpeed < 0) e.baseSpeed = e.speed;
+            e.speed = e.baseSpeed * speedMultiplier;
 
             e.attackDamage = 10 + (int)(minutesPassed / 2f);
 
