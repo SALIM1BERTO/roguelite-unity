@@ -117,23 +117,29 @@ public class EnemySpawner : MonoBehaviour
         bossSpawned = true;
         isBossActive = true;
 
-        Vector3 playerPos = GameManager.Instance.player.position;
-        Vector3 playerDir = (playerPos - currentPlanet.transform.position).normalized;
-        Vector3 spawnDir = -playerDir;
-
-        float radius = currentPlanet.transform.localScale.x * 0.5f;
-        Vector3 spawnPos = currentPlanet.transform.position + spawnDir * (radius + 3.8f);
-
-        // Cinematic screen glitch, rumble, flash bang, and planetary shockwave
-        BossIntroSequence.StartSequence(spawnPos, currentPlanet, () => {
-            GameObject bossObj = new GameObject("BossLeviathan");
-            bossObj.transform.position = spawnPos;
-            bossObj.transform.SetParent(currentPlanet.transform, true);
-
-            BossLeviathan boss = bossObj.AddComponent<BossLeviathan>();
-            GravityBody gb = bossObj.GetComponent<GravityBody>();
-            if (gb != null) gb.planet = currentPlanet;
+        PlanetGravity arena=currentPlanet;
+        Transform player=GameManager.Instance.player;
+        Vector3 position=BossWorldMotion.SurfacePoint(arena.transform,player.position,player.forward,7f,.8f);
+        BossIntroSequence.StartSequence(position,arena,() => {
+            if(arena==null) return;
+            GameObject bossObject=new GameObject("BossLeviathan");
+            bossObject.transform.SetParent(arena.transform,false);
+            bossObject.transform.position=position;
+            bossObject.AddComponent<BossLeviathan>();
         });
+    }
+
+    public Enemy SpawnBossMinion(PlanetGravity arena,Vector3 position)
+    {
+        if(arena==null || swarmerPrefab==null) return null;
+        if(swarmerPool==null) InitPools();
+        GameObject obj=swarmerPool.Get();
+        Enemy enemy=obj.GetComponent<Enemy>(); enemy.pool=swarmerPool;
+        enemy.maxHp=45; enemy.hp=45; enemy.speed=3.2f; enemy.attackDamage=8;
+        obj.transform.SetParent(arena.transform,true); obj.transform.position=position;
+        GravityBody body=obj.GetComponent<GravityBody>();
+        if(body!=null) { body.planet=arena; body.SnapToSurface(); }
+        return enemy;
     }
 
     void SpawnEnemy()

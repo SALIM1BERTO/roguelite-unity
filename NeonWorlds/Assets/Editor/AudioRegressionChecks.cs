@@ -96,7 +96,8 @@ public static class AudioRegressionChecks
             XpGem gem = gemObject.AddComponent<XpGem>();
             Invoke(gem, "OnTriggerEnter", game.player.GetComponent<Collider>());
             Invoke(gem, "OnTriggerEnter", game.player.GetComponent<Collider>());
-            Check(game.xp == beforeXp + 10 && Count(sources, Clip(audio, AudioCue.Pickup)) == 1,
+            int expectedGemXP=PlanetaryBiome.CurrentBiome!=null ? Mathf.RoundToInt(10*PlanetaryBiome.CurrentBiome.xpMultiplier) : 10;
+            Check(game.xp == beforeXp + expectedGemXP && Count(sources, Clip(audio, AudioCue.Pickup)) == 1,
                 "Duplicate gem contacts award XP and play pickup once");
 
             Clear(audio, sources);
@@ -296,7 +297,7 @@ public static class AudioRegressionChecks
     }
     static void Invoke(object target, string name, params object[] parameters)
     {
-        target.GetType().GetMethod(name, Private).Invoke(target, parameters);
+        target.GetType().GetMethod(name, Private | BindingFlags.Public).Invoke(target, parameters);
     }
     static void Check(bool condition, string description)
     {

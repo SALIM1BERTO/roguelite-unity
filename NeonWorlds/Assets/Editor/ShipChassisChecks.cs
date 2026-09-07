@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using UnityEditor;
 using UnityEngine;
 
-[InitializeOnLoad]
 public static class ShipChassisChecks
 {
-    [InitializeOnLoadMethod]
     [MenuItem("NeonWorlds/Run Ship Chassis Checks")]
     public static void Run()
     {
@@ -14,6 +12,9 @@ public static class ShipChassisChecks
         int initialCores = MetaProgression.GetStarCores();
         MetaProgression.ShipChassis initialShip = MetaProgression.GetSelectedShip();
 
+        string titanKey=MetaProgression.KEY_SHIP_PREFIX+"Titan";
+        bool hadTitan=PlayerPrefs.HasKey(titanKey);
+        int titanState=PlayerPrefs.GetInt(titanKey);
         try
         {
             // 1. Check Costs
@@ -30,6 +31,7 @@ public static class ShipChassisChecks
             Assert(MetaProgression.GetSelectedShip() == MetaProgression.ShipChassis.Interceptor, "Failed to select Interceptor");
 
             // 4. Test Unlock with Cores
+            PlayerPrefs.DeleteKey(titanKey);
             MetaProgression.AddStarCores(100);
             bool unlockedTitan = MetaProgression.TryUnlockShip(MetaProgression.ShipChassis.Titan);
             Assert(unlockedTitan, "Failed to unlock Titan with sufficient cores");
@@ -89,6 +91,7 @@ public static class ShipChassisChecks
         }
         finally
         {
+            if(hadTitan) PlayerPrefs.SetInt(titanKey,titanState); else PlayerPrefs.DeleteKey(titanKey);
             // Restore initial state
             PlayerPrefs.SetInt(MetaProgression.KEY_CORES, initialCores);
             MetaProgression.SetSelectedShip(initialShip);

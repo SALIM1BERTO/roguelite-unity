@@ -25,6 +25,7 @@ public class Bullet : MonoBehaviour
     private float timer;
     public ObjectPool<GameObject> pool;
     private Rigidbody rb;
+    private readonly System.Collections.Generic.HashSet<BossLeviathan> hitBosses = new System.Collections.Generic.HashSet<BossLeviathan>();
     private bool hasHit;
     private bool released;
 
@@ -58,6 +59,7 @@ public class Bullet : MonoBehaviour
         hasFragmented = false;
         antimatterDropTimer = 0f;
         hitCooldowns.Clear();
+        hitBosses.Clear();
     }
 
     void Update()
@@ -120,6 +122,7 @@ public class Bullet : MonoBehaviour
         BossLeviathan boss = other.GetComponentInParent<BossLeviathan>();
         if (boss != null)
         {
+            if (!hitBosses.Add(boss)) return;
             boss.TakeDamage(damage, isCritical, isSupernova ? DamageTextStyle.Area : DamageTextStyle.Normal);
             GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
             if (fxPrefab)

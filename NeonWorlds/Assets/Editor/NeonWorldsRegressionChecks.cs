@@ -17,6 +17,7 @@ public static class NeonWorldsRegressionChecks
     static bool audioCounted;
     static bool musicStarted;
     static bool musicCounted;
+    static bool bossStarted;
     static int assertions;
     static int runtimeErrors;
     static int editorSearchErrors;
@@ -40,6 +41,7 @@ public static class NeonWorldsRegressionChecks
             NeonAudioSetup.CreatePrefab();
             NeonMusicSetup.CreatePrefab();
             StabilizePlayerSetup.MigrateSampleScene();
+            NeonVisualSetup.Apply();
             CheckShip();
             SessionState.SetBool(RunningKey, true);
             EditorApplication.EnterPlaymode();
@@ -53,11 +55,13 @@ public static class NeonWorldsRegressionChecks
     static void Tick()
     {
         if (!EditorApplication.isPlaying) return;
+        Application.runInBackground = true;
         try
         {
             double elapsed = EditorApplication.timeSinceStartup - started;
-            if (!checkedRuntime && elapsed > 2d)
+            if (!checkedRuntime && elapsed > 2d && Time.timeSinceLevelLoad > 1.5f)
             {
+                assertions += VisualRegressionChecks.Run();
                 CheckShip();
                 CheckTeleport();
                 CheckNestedScale();
@@ -96,8 +100,16 @@ public static class NeonWorldsRegressionChecks
                 }
             }
             if (checkedRuntime && audioCounted && musicCounted && elapsed > 12d)
-                Finish(runtimeErrors == 0 ? null : runtimeErrors + " runtime errors were logged.");
-            if (elapsed > 60d) Finish("Runtime tests timed out.");
+            {
+                if(!bossStarted) { BossFightRegressionChecks.Begin(); bossStarted=true; }
+                BossFightRegressionChecks.Tick();
+                if(BossFightRegressionChecks.Complete)
+                {
+                    assertions+=BossFightRegressionChecks.Assertions;
+                    Finish(runtimeErrors==0 ? null : runtimeErrors+" runtime errors were logged.");
+                }
+            }
+            if (elapsed > 100d) Finish("Runtime tests timed out.");
         }
         catch (Exception error)
         {
@@ -110,7 +122,8 @@ public static class NeonWorldsRegressionChecks
         PlayerShip ship = GameObject.Find("Player").GetComponent<PlayerShip>();
         Require(ship != null && ship.visual != null, "Player has its dedicated visual.");
         Near(ship.transform.lossyScale, Vector3.one, "Player world scale");
-        Near(ship.visual.lossyScale, Vector3.one * ship.visualScale, "Visual world scale");
+        Near(ship.visual.lossyScale, ship.visual.localScale, "Visual world scale remains independent of planet scale");
+        Require(ship.visual.lossyScale.magnitude < 2.5f && ship.visual.lossyScale.magnitude > .5f, "Chassis stays within readable world dimensions");
         Require(!ship.GetComponent<MeshRenderer>().enabled, "Legacy root renderer disabled");
         Require(!ship.transform.Find("UfoBody").gameObject.activeSelf, "Legacy UFO disabled");
         Require(!ship.transform.Find("Cockpit").gameObject.activeSelf, "Legacy cockpit disabled");
@@ -128,6 +141,7 @@ public static class NeonWorldsRegressionChecks
         GravityBody body = ship.GetComponent<GravityBody>();
         PlanetGravity originalPlanet = body.planet;
         Vector3 originalPosition = ship.transform.position;
+        Vector3 originalVisualScale = ship.visual.lossyScale;
         Quaternion originalRotation = ship.transform.rotation;
         EnemySpawner spawner = EnemySpawner.Instance;
         PlanetGravity originalSpawnPlanet = spawner.currentPlanet;
@@ -145,7 +159,7 @@ public static class NeonWorldsRegressionChecks
                 Require(body.planet == target && ship.transform.parent == target.transform, "Teleport updates planet and parent");
                 Require(spawner.currentPlanet == target, "Teleport updates spawner");
                 Near(ship.transform.lossyScale, Vector3.one, "Teleport preserves root scale");
-                Near(ship.visual.lossyScale, Vector3.one * ship.visualScale, "Teleport preserves ship size");
+                Near(ship.visual.lossyScale, originalVisualScale, "Teleport preserves ship size");
                 float distance = Vector3.Distance(ship.transform.position, target.transform.position);
                 Require(Mathf.Abs(distance - target.transform.lossyScale.x * 0.5f - ship.surfaceOffset) < 0.005f,
                     "Teleport preserves surface clearance");
@@ -157,6 +171,7 @@ public static class NeonWorldsRegressionChecks
             ship.transform.SetParent(originalPlanet.transform, true);
             ship.transform.SetPositionAndRotation(originalPosition, originalRotation);
             spawner.currentPlanet = originalSpawnPlanet;
+            PlanetaryBiome.OnPlayerArrived(originalPlanet);
             UnityEngine.Object.DestroyImmediate(gate);
         }
     }
@@ -264,12 +279,13 @@ public static class NeonWorldsRegressionChecks
 
     static void Finish(string failure)
     {
+        BossFightRegressionChecks.End();
         AudioRegressionChecks.EndOutputCapture();
         MusicRegressionChecks.End();
         SessionState.EraseBool(RunningKey);
         EditorApplication.update -= Tick;
         Application.logMessageReceived -= OnLog;
-        string result = failure == null ? "PASS: " + assertions + " assertions; 12-second scene smoke test; zero gameplay runtime errors."
+        string result = failure == null ? "PASS: " + assertions + " assertions; scene smoke test and three-phase boss encounter; zero gameplay runtime errors."
             : "FAIL: " + failure;
         result += " Editor search startup errors (reported separately): " + editorSearchErrors + ".";
         File.WriteAllText(Path.GetFullPath("../regression-result.txt"), result);

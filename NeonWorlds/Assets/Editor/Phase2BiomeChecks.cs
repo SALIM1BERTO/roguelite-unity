@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using UnityEditor;
 using UnityEngine;
 
-[InitializeOnLoad]
 public static class Phase2BiomeChecks
 {
-    [InitializeOnLoadMethod]
     [MenuItem("NeonWorlds/Run Phase 2 Biome Checks")]
     public static void Run()
     {

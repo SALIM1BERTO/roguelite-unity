@@ -1,146 +1,75 @@
 using UnityEngine;
-
-public enum DamageTextStyle
-{
-    Normal,
-    Critical,
-    Area,
-    Electric
-}
-
+using System.Collections.Generic;
+public enum DamageTextStyle { Normal, Critical, Area, Electric }
 public class FloatingText : MonoBehaviour
 {
-    private TextMesh textMesh;
-    private float lifetime = 0.85f;
-    private float timer = 0f;
-    private float baseScale = 1f;
-    private Vector3 lateralVelocity = Vector3.zero;
-    private float verticalSpeed = 2.4f;
-
-    public void Setup(string text)
+    const int MaximumVisible=32;
+    static readonly List<FloatingText> visible=new List<FloatingText>();
+    static int sequence;
+    TextMesh textMesh;
+    MeshRenderer meshRenderer;
+    float timer,lifetime=.7f,pixelHeight=14f;
+    Vector3 drift;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetState() { visible.Clear(); sequence=0; }
+    void OnEnable()
     {
-        Setup(text, new Color(0.92f, 0.98f, 1f), 1f);
+        visible.RemoveAll(item=>item==null);
+        while(visible.Count>=MaximumVisible)
+        {
+            FloatingText oldest=visible[0]; visible.RemoveAt(0);
+            if(oldest!=null) { oldest.gameObject.SetActive(false); Destroy(oldest.gameObject); }
+        }
+        visible.Add(this);
     }
-
-    public void SetupDamage(int damage, bool isCrit, DamageTextStyle style = DamageTextStyle.Normal)
+    void OnDisable() { visible.Remove(this); }
+    public void Setup(string text) { Setup(text,new Color(.92f,.98f,1f)); }
+    public void SetupDamage(int damage,bool isCrit,DamageTextStyle style=DamageTextStyle.Normal)
     {
-        string display;
-        Color color;
-        float scale;
-
-        if (isCrit)
-        {
-            display = $"★ {damage}!";
-            color = new Color(1f, 0.88f, 0.15f); // Radiant Gold
-            scale = 1.55f;
-        }
-        else if (style == DamageTextStyle.Area)
-        {
-            display = damage.ToString();
-            color = new Color(0.92f, 0.25f, 1f); // Neon Violet
-            scale = 1.25f;
-        }
-        else if (style == DamageTextStyle.Electric)
-        {
-            display = damage.ToString();
-            color = new Color(0f, 0.95f, 1f); // Electric Cyan
-            scale = 1.15f;
-        }
-        else
-        {
-            display = damage.ToString();
-            color = new Color(0.92f, 0.98f, 1f); // Crisp Cyan-White
-            scale = 1.0f;
-        }
-
-        Setup(display, color, scale);
+        Color color=isCrit ? new Color(1f,.84f,.32f) : style==DamageTextStyle.Area ? new Color(.88f,.5f,1f) : style==DamageTextStyle.Electric ? new Color(.2f,.95f,1f) : new Color(.92f,.98f,1f);
+        Setup(damage.ToString()+(isCrit ? "!" : ""),color,isCrit ? 1.2f : 1f);
     }
-
-    public void Setup(string text, Color color, float sizeMultiplier = 1f)
+    public void Setup(string text,Color color,float sizeMultiplier=1f)
     {
-        timer = 0f;
-        baseScale = sizeMultiplier;
-        textMesh = gameObject.GetComponent<TextMesh>();
-        if (textMesh == null)
-        {
-            textMesh = gameObject.AddComponent<TextMesh>();
-        }
-
-        textMesh.text = text;
-        textMesh.anchor = TextAnchor.MiddleCenter;
-        textMesh.alignment = TextAlignment.Center;
-        textMesh.characterSize = 0.5f * sizeMultiplier;
-        textMesh.fontSize = Mathf.RoundToInt(26 * sizeMultiplier);
-        textMesh.color = color;
-        textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-        MeshRenderer mr = gameObject.GetComponent<MeshRenderer>();
-        if (mr != null && textMesh.font != null)
-        {
-            mr.sharedMaterial = textMesh.font.material;
-        }
-
-        // Add soft lateral blossom velocity so damage numbers don't stack directly on top of each other
-        Transform planet = transform.parent;
-        Vector3 surfaceNormal = planet != null
-            ? (transform.position - planet.position).normalized : Vector3.up;
-        Vector3 randomTang = Vector3.Cross(surfaceNormal, Random.onUnitSphere).normalized;
-        lateralVelocity = randomTang * Random.Range(-0.85f, 0.85f);
-
-        // Initial punch scale
-        transform.localScale = Vector3.one * (baseScale * 1.5f);
-
-        FaceCamera();
+        timer=0; pixelHeight=14f*Mathf.Clamp(sizeMultiplier,.8f,1.25f);
+        lifetime=sizeMultiplier>1 ? .8f : .7f;
+        textMesh=GetComponent<TextMesh>(); if(textMesh==null) textMesh=gameObject.AddComponent<TextMesh>();
+        textMesh.text=text; textMesh.anchor=TextAnchor.MiddleCenter; textMesh.alignment=TextAlignment.Center;
+        textMesh.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        textMesh.fontSize=48; textMesh.characterSize=.1f; textMesh.color=color;
+        meshRenderer=GetComponent<MeshRenderer>(); meshRenderer.sharedMaterial=textMesh.font.material;
+        Camera camera=Camera.main;
+        float side=((sequence++%7)-3)*.18f;
+        Vector3 normal=transform.parent!=null ? (transform.position-transform.parent.position).normalized : Vector3.up;
+        drift=normal*.85f+(camera!=null ? Vector3.ProjectOnPlane(camera.transform.right,normal)*side : Vector3.zero);
+        UpdatePresentation();
     }
-
     void Update()
     {
-        timer += Time.deltaTime;
-        if (timer >= lifetime)
+        timer+=Time.deltaTime;
+        if(timer>=lifetime) { gameObject.SetActive(false); Destroy(gameObject); return; }
+        transform.position+=drift*Time.deltaTime;
+        if(textMesh!=null)
         {
-            Destroy(gameObject);
-            return;
-        }
-
-        // Punch-scale settle animation (pops up and settles down in 0.15s)
-        float popDuration = 0.15f;
-        if (timer < popDuration)
-        {
-            float p = timer / popDuration;
-            float currentScale = Mathf.Lerp(baseScale * 1.5f, baseScale, Mathf.Sin(p * Mathf.PI * 0.5f));
-            transform.localScale = Vector3.one * currentScale;
-        }
-        else
-        {
-            transform.localScale = Vector3.one * baseScale;
-        }
-
-        // Upward and lateral drift
-        Transform planet = transform.parent;
-        Vector3 surfaceNormal = planet != null
-            ? (transform.position - planet.position).normalized : Vector3.up;
-        transform.position += (surfaceNormal * verticalSpeed + lateralVelocity) * Time.deltaTime;
-        lateralVelocity = Vector3.Lerp(lateralVelocity, Vector3.zero, Time.deltaTime * 3f);
-
-        // Smooth fade out in the last 40% of lifetime
-        if (textMesh != null)
-        {
-            float fadeStart = 0.55f;
-            float alpha = timer < fadeStart ? 1f : Mathf.Clamp01(1f - ((timer - fadeStart) / (lifetime - fadeStart)));
-            Color c = textMesh.color;
-            c.a = alpha;
-            textMesh.color = c;
+            Color color=textMesh.color; color.a=1f-Mathf.InverseLerp(lifetime*.55f,lifetime,timer); textMesh.color=color;
         }
     }
-
-    void LateUpdate()
+    void LateUpdate() { UpdatePresentation(); }
+    void UpdatePresentation()
     {
-        FaceCamera();
-    }
-
-    void FaceCamera()
-    {
-        Camera camera = Camera.main;
-        if (camera != null) transform.rotation = camera.transform.rotation;
+        if(textMesh==null || meshRenderer==null) return;
+        Camera camera=Camera.main;
+        float worldHeight=.35f;
+        if(camera!=null)
+        {
+            transform.rotation=camera.transform.rotation;
+            float depth=Vector3.Dot(transform.position-camera.transform.position,camera.transform.forward);
+            float viewHeight=camera.orthographic ? camera.orthographicSize*2f : 2f*Mathf.Max(camera.nearClipPlane,depth)*Mathf.Tan(camera.fieldOfView*.5f*Mathf.Deg2Rad);
+            worldHeight=viewHeight*pixelHeight/Mathf.Max(1,camera.pixelHeight);
+        }
+        float pop=Mathf.Lerp(1.12f,1f,Mathf.Clamp01(timer/.12f));
+        float glyphHeight=Mathf.Max(.01f,meshRenderer.localBounds.size.y);
+        float scale=Mathf.Clamp(worldHeight,.12f,1.1f)*pop/glyphHeight;
+        BossWorldMotion.SetWorldScale(transform,Vector3.one*scale);
     }
 }

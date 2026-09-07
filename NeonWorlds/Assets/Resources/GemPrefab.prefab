@@ -74,7 +74,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ca70f48a0cdaeba47a325fd677a71d3c, type: 2}
+  - {fileID: 2100000, guid: 0d5ba22d9522ab449bf292e47b39a470, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -159,6 +159,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GravityBody
   planet: {fileID: 0}
+  surfaceOffset: 1
 --- !u!114 &3281646224148691759
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5001,3 +5002,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b465f4d1c816dc24082328a83eedb9dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalTrailAssigner
+  emissionRateOverLocalDistance: 30

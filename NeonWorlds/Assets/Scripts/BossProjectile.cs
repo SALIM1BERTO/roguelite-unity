@@ -1,107 +1,58 @@
 using UnityEngine;
-
+[RequireComponent(typeof(SphereCollider),typeof(Rigidbody))]
 public class BossProjectile : MonoBehaviour
 {
-    public float speed = 22f;
-    public float lifeTime = 5.0f;
-    public int damage = 16;
+    public float speed=8f,lifeTime=2f;
+    public int damage=10;
     public Transform planet;
-
-    private float timer;
-    private bool hasHit = false;
-
-    void Start()
+    BossLeviathan owner;
+    float timer;
+    bool hasHit;
+    Vector3 direction;
+    readonly RaycastHit[] sweepHits=new RaycastHit[16];
+    void Awake()
     {
-        timer = lifeTime;
-        if (planet != null)
-        {
-            transform.SetParent(planet, true);
-        }
-
-        MeshRenderer mr = GetComponent<MeshRenderer>();
-        if (mr != null)
-        {
-            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            Color neonColor = new Color(1f, 0.1f, 0.5f); // Neon Magenta
-            mat.SetColor("_BaseColor", neonColor);
-            mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", neonColor * 4f);
-            mr.material = mat;
-        }
-
-        SphereCollider sc = GetComponent<SphereCollider>();
-        if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
-        sc.isTrigger = true;
-        sc.radius = 0.8f;
+        SphereCollider sphere=GetComponent<SphereCollider>(); sphere.isTrigger=true; sphere.radius=.5f;
+        Rigidbody body=GetComponent<Rigidbody>(); body.isKinematic=true; body.useGravity=false;
     }
-
+    public void Launch(BossLeviathan boss,Transform world,Vector3 position,Vector3 heading,float velocity,int amount,float duration)
+    {
+        owner=boss; planet=world; speed=velocity; damage=amount; lifeTime=duration;
+        hasHit=false; timer=duration; direction=heading.normalized;
+        transform.SetParent(world,true); transform.position=position;
+        transform.rotation=Quaternion.LookRotation(direction,(position-world.position).normalized);
+        BossWorldMotion.SetWorldScale(transform,Vector3.one*.28f);
+    }
     void Update()
     {
-        if (hasHit) return;
-
-        if (planet != null)
+        if(hasHit || Time.timeScale<=0) return;
+        BossWorldMotion.SetWorldScale(transform,Vector3.one*.28f);
+        Vector3 previous=transform.position;
+        BossWorldMotion.Move(transform,planet,ref direction,speed*Time.deltaTime,.5f);
+        Vector3 delta=transform.position-previous;
+        // Sweep the travelled segment so a slow frame cannot skip the player's hitbox.
+        if(delta.sqrMagnitude>.000001f)
         {
-            Vector3 localForward = planet.InverseTransformDirection(transform.forward);
-            float localSpeed = speed / planet.localScale.x;
-            Vector3 nextLocalPos = transform.localPosition + localForward * localSpeed * Time.deltaTime;
-            
-            float localRadius = 0.5f + (0.5f / planet.localScale.x);
-            transform.localPosition = nextLocalPos.normalized * localRadius;
-
-            Vector3 localSurfaceNormal = transform.localPosition.normalized;
-            Vector3 localForwardOnSphere = Vector3.ProjectOnPlane(localForward, localSurfaceNormal).normalized;
-            
-            if (localForwardOnSphere.sqrMagnitude > 0.01f)
-            {
-                transform.localRotation = Quaternion.LookRotation(localForwardOnSphere, localSurfaceNormal);
-            }
+            int count=Physics.SphereCastNonAlloc(previous,.14f,delta.normalized,sweepHits,delta.magnitude,~0,QueryTriggerInteraction.Collide);
+            for(int i=0;i<count && !hasHit;i++) HandleHit(sweepHits[i].collider.gameObject);
         }
-        else 
-        {
-            transform.position += transform.forward * speed * Time.deltaTime;
-        }
-
-        timer -= Time.deltaTime;
-        if (timer <= 0f)
-        {
-            Destroy(gameObject);
-        }
+        timer-=Time.deltaTime;
+        if(timer<=0) Release();
     }
-
-    void OnTriggerEnter(Collider other)
-    {
-        HandleHit(other.gameObject);
-    }
-
-    void OnCollisionEnter(Collision col)
-    {
-        HandleHit(col.gameObject);
-    }
-
+    void OnTriggerEnter(Collider other) { HandleHit(other.gameObject); }
     void HandleHit(GameObject other)
     {
-        if (hasHit) return;
-
-        PlayerMovement pm = other.GetComponentInParent<PlayerMovement>();
-        PlayerShip ps = other.GetComponentInParent<PlayerShip>();
-
-        if (pm != null || ps != null)
-        {
-            hasHit = true;
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.TakeDamage(damage);
-            }
-
-            GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
-            if (fxPrefab != null)
-            {
-                GameObject fx = Instantiate(fxPrefab, transform.position, Quaternion.identity);
-                if (planet != null) fx.transform.SetParent(planet, true);
-                Destroy(fx, 1f);
-            }
-
-            Destroy(gameObject);
-        }
+        if(hasHit || !isActiveAndEnabled) return;
+        if(other.GetComponentInParent<PlayerMovement>()==null && other.GetComponentInParent<PlayerShip>()==null) return;
+        GravityBody playerBody=other.GetComponentInParent<GravityBody>();
+        if(playerBody!=null && playerBody.planet!=null && playerBody.planet.transform!=planet) return;
+        GameManager.Instance?.TakeDamage(damage);
+        Release();
+    }
+    void Release()
+    {
+        if(hasHit) return;
+        hasHit=true;
+        if(owner!=null) owner.ReleaseProjectile(this); else Destroy(gameObject);
     }
 }

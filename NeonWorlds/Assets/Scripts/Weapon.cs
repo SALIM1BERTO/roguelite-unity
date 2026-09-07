@@ -123,7 +123,8 @@ public class Weapon : MonoBehaviour
             }
         }
 
-        if (!isAiming && Mouse.current != null && Mouse.current.leftButton.isPressed)
+        if (!isAiming && Mouse.current != null && Mouse.current.leftButton.isPressed
+            && (UnityEngine.EventSystems.EventSystem.current==null || !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()))
         {
             Vector2 mousePos = Mouse.current.position.ReadValue();
             if (Camera.main != null)

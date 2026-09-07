@@ -8,6 +8,7 @@ public class Teleporter : MonoBehaviour
 
     private GameObject lockBarrier;
     private MeshRenderer meshR;
+    private Material barrierMaterial;
 
     void Awake()
     {
@@ -24,6 +25,7 @@ public class Teleporter : MonoBehaviour
 
         if (isLocked && lockBarrier != null)
         {
+            BossWorldMotion.SetWorldScale(lockBarrier.transform,Vector3.one);
             float pulse = Mathf.PingPong(Time.time * 4f, 1f);
             MeshRenderer bmr = lockBarrier.GetComponent<MeshRenderer>();
             if (bmr != null && bmr.material != null)
@@ -38,19 +40,16 @@ public class Teleporter : MonoBehaviour
         isLocked = true;
         if (lockBarrier == null)
         {
-            lockBarrier = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            lockBarrier.name = "LockBarrier";
-            lockBarrier.transform.SetParent(transform, false);
-            lockBarrier.transform.localPosition = Vector3.zero;
-            lockBarrier.transform.localScale = Vector3.one * 2.5f;
-            Destroy(lockBarrier.GetComponent<Collider>());
+            lockBarrier = new GameObject("LockBarrier");
+            lockBarrier.transform.SetParent(transform,false);
+            BossWorldMotion.SetWorldScale(lockBarrier.transform,Vector3.one);
+            LineRenderer ring=lockBarrier.AddComponent<LineRenderer>();
+            ring.useWorldSpace=false; ring.loop=true; ring.positionCount=32; ring.widthMultiplier=.065f;
+            barrierMaterial=new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            barrierMaterial.SetColor("_BaseColor",new Color(1f,.3f,.4f));
+            ring.sharedMaterial=barrierMaterial;
+            for(int i=0;i<32;i++) { float angle=i*Mathf.PI/16; ring.SetPosition(i,new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle))*1.15f); }
 
-            MeshRenderer bmr = lockBarrier.GetComponent<MeshRenderer>();
-            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            mat.SetColor("_BaseColor", new Color(1f, 0f, 0.1f, 0.7f));
-            mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", Color.red * 4f);
-            bmr.material = mat;
         }
         else
         {
@@ -65,6 +64,8 @@ public class Teleporter : MonoBehaviour
         {
             Destroy(lockBarrier);
             lockBarrier = null;
+            if(barrierMaterial!=null) Destroy(barrierMaterial);
+            barrierMaterial=null;
         }
 
         // Victory burst on portal
@@ -75,6 +76,8 @@ public class Teleporter : MonoBehaviour
             Destroy(fx, 2f);
         }
     }
+
+    void OnDestroy() { if(barrierMaterial!=null) Destroy(barrierMaterial); }
 
     public static void LockAllTeleporters()
     {

@@ -1,93 +1,294 @@
 using UnityEngine;
-using System.Collections;
+using UnityEngine.Pool;
 using System.Collections.Generic;
 
 public class BossLeviathan : MonoBehaviour
 {
     public static BossLeviathan Instance;
-
-    [Header("Stats")]
-    public int maxHp = 2400;
+    [Header("Combat (world units)")]
+    public int maxHp=1800;
     public int hp;
-    public float baseSpeed = 2.8f;
-    public int contactDamage = 25;
-    public float contactCooldown = 0.5f;
-    private float lastContactTime = 0f;
-
-    [Header("Phases")]
-    public int currentPhase = 1;
-
-    [Header("Visual Components")]
-    private Transform coreTransform;
-    private Transform eyeTransform;
-    private Material coreMat;
-    private Material eyeMat;
-    private Material armorMat;
-    private Color currentColor;
-
-    private Transform innerRingPivot;
-    private Transform outerRingPivot;
-    private List<Transform> innerCannons = new List<Transform>();
-    private List<Transform> outerFins = new List<Transform>();
-    private List<Transform> armorPlates = new List<Transform>();
-
-    private GravityBody gravityBody;
-    private bool isDead = false;
-    private bool isDashing = false;
-    private Vector3 dashDirection;
-    private float dashTimer = 0f;
-
-    // Timers
-    private float novaTimer = 2.5f;
-    private float dashCooldownTimer = 7f;
-    private float spawnMinionsTimer = 5f;
-    private float antipodalTimer = 0f;
-    private bool isIntercepting = false;
-    private bool isIntroDeploying = true;
+    public float baseSpeed=2.8f;
+    public int contactDamage=12;
+    public float contactCooldown=.9f;
+    [Range(.2f,.6f)] public float visualScale=.38f;
+    public int currentPhase=1;
+    public enum FightState { Deploy, Approach, Windup, Dash, Recovery, Dead }
+    public FightState State { get; private set; }
+    enum Attack { Nova, Dash, Reposition }
+    Attack attack;
+    float stateTimer,attackTimer=2.4f,lastContactTime=-10f,farTimer,flashUntil;
+    int attackIndex;
+    bool isDead;
+    Vector3 attackDirection,arrivalPosition;
+    Transform visualRoot,coreTransform,eyeTransform,innerRingPivot,outerRingPivot;
+    Material coreMat,eyeMat,armorMat,projectileMat,warningMat;
+    Color currentColor;
+    readonly List<Transform> innerCannons=new List<Transform>(),outerFins=new List<Transform>(),armorPlates=new List<Transform>();
+    readonly List<Enemy> escorts=new List<Enemy>();
+    readonly HashSet<BossProjectile> projectiles=new HashSet<BossProjectile>();
+    ObjectPool<BossProjectile> projectilePool;
+    LineRenderer telegraph;
+    readonly Vector3[] warningPoints=new Vector3[33];
+    GravityBody gravityBody;
+    Transform Planet => gravityBody!=null && gravityBody.planet!=null ? gravityBody.planet.transform : transform.parent;
+    public string AttackHint => State==FightState.Windup ? (attack==Attack.Dash ? "INVESTIDA" : attack==Attack.Nova ? "NOVA" : "REPOSICIONANDO") : State==FightState.Recovery ? "RECUPERANDO" : "FASE "+currentPhase;
+    public int ActiveProjectileCount => projectiles.Count;
+    public int EscortCount { get { escorts.RemoveAll(e=>e==null || e.isDead || !e.gameObject.activeSelf); return escorts.Count; } }
 
     void Awake()
     {
-        Instance = this;
-        hp = maxHp;
-
-        gravityBody = GetComponent<GravityBody>();
-        if (gravityBody == null) gravityBody = gameObject.AddComponent<GravityBody>();
-        // Balanced hovering height: clear of terrain while framing cleanly on screen
-        gravityBody.surfaceOffset = 1.8f;
-
+        Instance=this; hp=maxHp;
+        BossWorldMotion.SetWorldScale(transform,Vector3.one);
+        gravityBody=GetComponent<GravityBody>();
+        if(gravityBody==null) gravityBody=gameObject.AddComponent<GravityBody>();
+        gravityBody.surfaceOffset=.8f;
+        if(transform.parent!=null) gravityBody.planet=transform.parent.GetComponent<PlanetGravity>();
+        visualRoot=new GameObject("BossVisual").transform;
+        visualRoot.SetParent(transform,false); visualRoot.localScale=Vector3.one*visualScale*.1f;
         BuildVisuals();
-
-        SphereCollider sc = GetComponent<SphereCollider>();
-        if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
-        sc.isTrigger = false;
-        sc.radius = 1.7f;
-        sc.center = Vector3.zero;
+        SphereCollider hitbox=GetComponent<SphereCollider>(); if(hitbox==null) hitbox=gameObject.AddComponent<SphereCollider>();
+        hitbox.radius=.95f; hitbox.isTrigger=false;
+        Rigidbody body=GetComponent<Rigidbody>(); if(body==null) body=gameObject.AddComponent<Rigidbody>();
+        body.isKinematic=true; body.useGravity=false;
+        telegraph=new GameObject("AttackWarning").AddComponent<LineRenderer>();
+        telegraph.transform.SetParent(transform,false); telegraph.useWorldSpace=true;
+        warningMat=new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        warningMat.SetColor("_BaseColor",new Color(1f,.67f,.22f));
+        telegraph.sharedMaterial=warningMat; telegraph.widthMultiplier=.1f;
+        telegraph.positionCount=0;
+        projectileMat=new Material(Shader.Find("NeonWorlds/EmissiveGeometry") ?? Shader.Find("Universal Render Pipeline/Lit"));
+        projectileMat.SetColor("_BaseColor",new Color(1f,.24f,.42f));
+        projectileMat.SetColor("_EmissionColor",new Color(1f,.24f,.42f)*1.5f);
+        projectilePool=new ObjectPool<BossProjectile>(CreateProjectile,p=>p.gameObject.SetActive(true),p=>p.gameObject.SetActive(false),p=>{ if(p!=null) Destroy(p.gameObject); },true,24,48);
+        State=FightState.Deploy; stateTimer=1.1f;
+        SetPhase(1);
     }
-
     void Start()
     {
-        SetPhase(1);
+        gravityBody.SnapToSurface();
         Teleporter.LockAllTeleporters();
-
-        // Clear minor mobs and summon elite escort
-        WipeExistingMobsAndSummonEscort();
-
+        // Returning mobs to their pools avoids a screen full of 9999-damage labels.
+        foreach(Enemy enemy in new List<Enemy>(Enemy.activeEnemies)) DespawnEnemy(enemy);
         RuntimeUIBuilder.BuildBossHealthBar(this);
-        StartCoroutine(IntroDeployAnimation());
+        RuntimeUIBuilder.UpdateBossHP(hp,maxHp);
     }
-
+    void LateUpdate() { BossWorldMotion.SetWorldScale(transform,Vector3.one); }
+    void OnTransformParentChanged() { BossWorldMotion.SetWorldScale(transform,Vector3.one); }
+    void Update()
+    {
+        if(isDead || Time.timeScale<=0 || Planet==null) return;
+        float dt=Time.deltaTime;
+        if(State==FightState.Deploy)
+        {
+            stateTimer-=dt;
+            visualRoot.localScale=Vector3.one*visualScale*Mathf.SmoothStep(.1f,1f,1f-stateTimer/1.1f);
+            if(stateTimer<=0) { visualRoot.localScale=Vector3.one*visualScale; State=FightState.Recovery; stateTimer=1f; GameManager.Instance?.CheckPendingLevelUp(); }
+            return;
+        }
+        innerRingPivot.Rotate(0,(35+currentPhase*20)*dt,0);
+        outerRingPivot.Rotate(0,-(25+currentPhase*15)*dt,0);
+        Color color=Time.time<flashUntil ? Color.white : State==FightState.Windup ? new Color(1f,.67f,.22f) : currentColor;
+        coreMat.SetColor("_BaseColor",color); coreMat.SetColor("_EmissionColor",color*(State==FightState.Windup ? 2.2f : 1.6f));
+        GameManager game=GameManager.Instance;
+        if(game==null || game.player==null || game.isGameOver || RuntimeUIBuilder.HasEndScreen) return;
+        GravityBody playerBody=game.player.GetComponent<GravityBody>();
+        if(playerBody!=null && playerBody.planet!=gravityBody.planet) return;
+        Vector3 normal=(transform.position-Planet.position).normalized;
+        Vector3 toPlayer=game.player.position-transform.position;
+        Vector3 tangent=Vector3.ProjectOnPlane(toPlayer,normal).normalized;
+        float distance=toPlayer.magnitude;
+        if(tangent.sqrMagnitude<.001f) tangent=Vector3.ProjectOnPlane(transform.forward,normal).normalized;
+        eyeTransform.localPosition=visualRoot.InverseTransformDirection(tangent)*1.5f;
+        // Chord distance avoids phantom contact damage from the opposite hemisphere.
+        if((State==FightState.Approach || State==FightState.Dash) && distance<1.35f && Time.time-lastContactTime>=contactCooldown)
+        {
+            lastContactTime=Time.time; game.TakeDamage(State==FightState.Dash ? 18 : contactDamage);
+        }
+        if(State==FightState.Windup)
+        {
+            stateTimer-=dt;
+            if(stateTimer<=0)
+            {
+                telegraph.positionCount=0;
+                if(attack==Attack.Nova) { FireRadialNova(); BeginRecovery(1.15f); }
+                else if(attack==Attack.Dash) { State=FightState.Dash; stateTimer=Mathf.Min(8f,Mathf.Abs(Planet.lossyScale.x)*.5f*1.1f)/12f; }
+                else { transform.position=arrivalPosition; gravityBody.SnapToSurface(); BeginRecovery(1.4f); }
+            }
+            return;
+        }
+        if(State==FightState.Dash)
+        {
+            BossWorldMotion.Move(transform,Planet,ref attackDirection,12f*Mathf.Min(dt,stateTimer),gravityBody.surfaceOffset);
+            stateTimer-=dt;
+            if(stateTimer<=0) BeginRecovery(1.4f);
+            return;
+        }
+        if(State==FightState.Recovery)
+        {
+            stateTimer-=dt;
+            if(stateTimer<=0) { State=FightState.Approach; RuntimeUIBuilder.UpdateBossHP(hp,maxHp); attackTimer=currentPhase==3 ? 1.3f : 2f; }
+            return;
+        }
+        farTimer=distance>18f ? farTimer+dt : 0f;
+        if(farTimer>4f)
+        {
+            arrivalPosition=BossWorldMotion.SurfacePoint(Planet,game.player.position,game.player.forward,7f,gravityBody.surfaceOffset);
+            BeginWarning(Attack.Reposition,tangent,1.2f); farTimer=0; return;
+        }
+        bool visible=IsVisibleToPlayer();
+        if(distance>4.6f || !visible) BossWorldMotion.Move(transform,Planet,ref tangent,baseSpeed*dt,gravityBody.surfaceOffset);
+        if(!visible) return;
+        attackTimer-=dt;
+        if(attackTimer<=0)
+        {
+            Attack next=currentPhase>=2 && attackIndex%2==1 ? Attack.Dash : Attack.Nova;
+            BeginWarning(next,tangent,next==Attack.Dash ? 1f : .9f);
+            attackIndex++;
+        }
+    }
+    bool IsVisibleToPlayer()
+    {
+        Camera camera=Camera.main; if(camera==null) return false;
+        Vector3 screen=camera.WorldToViewportPoint(transform.position);
+        Vector3 normal=(transform.position-Planet.position).normalized;
+        return screen.z>camera.nearClipPlane && screen.x>.08f && screen.x<.92f && screen.y>.08f && screen.y<.86f
+            && Vector3.Dot(normal,(camera.transform.position-transform.position).normalized)>.25f;
+    }
+    void BeginWarning(Attack next,Vector3 direction,float duration)
+    {
+        attack=next; attackDirection=direction; State=FightState.Windup; stateTimer=duration;
+        Vector3 normal=(transform.position-Planet.position).normalized;
+        if(next==Attack.Nova) attackDirection=Quaternion.AngleAxis(attackIndex*47f,normal)*direction;
+        if(next==Attack.Dash)
+        {
+            float length=Mathf.Min(8f,Mathf.Abs(Planet.lossyScale.x)*.5f*1.1f);
+            for(int i=0;i<33;i++) warningPoints[i]=BossWorldMotion.SurfacePoint(Planet,transform.position,direction,length*i/32f,.18f);
+        }
+        else
+        {
+            Vector3 origin=next==Attack.Reposition ? arrivalPosition : transform.position;
+            Vector3 up=(origin-Planet.position).normalized;
+            Vector3 forward=Vector3.ProjectOnPlane(attackDirection,up).normalized;
+            float start=next==Attack.Nova ? 45f : 0f,arc=next==Attack.Nova ? 270f : 360f;
+            for(int i=0;i<33;i++) warningPoints[i]=BossWorldMotion.SurfacePoint(Planet,origin,Quaternion.AngleAxis(start+arc*i/32f,up)*forward,1.6f,.18f);
+        }
+        RuntimeUIBuilder.UpdateBossHP(hp,maxHp);
+        telegraph.positionCount=33; telegraph.SetPositions(warningPoints);
+        GameAudio.Play(AudioCue.Hit);
+    }
+    void BeginRecovery(float duration)
+    {
+        State=FightState.Recovery; stateTimer=duration; telegraph.positionCount=0;
+        RuntimeUIBuilder.UpdateBossHP(hp,maxHp);
+        if(currentPhase>=2 && attackIndex>0 && attackIndex%3==0) SpawnMinionWave();
+    }
+    void FireRadialNova()
+    {
+        int count=currentPhase==1 ? 8 : currentPhase==2 ? 10 : 12;
+        Vector3 normal=(transform.position-Planet.position).normalized;
+        float speed=6.5f+currentPhase;
+        for(int i=0;i<count;i++)
+        {
+            float angle=i*360f/count;
+            // The same 90-degree opening is visible in the warning arc.
+            if(angle<45f || angle>315f) continue;
+            Vector3 dir=Quaternion.AngleAxis(angle,normal)*attackDirection;
+            BossProjectile projectile=projectilePool.Get(); projectiles.Add(projectile);
+            Vector3 position=BossWorldMotion.SurfacePoint(Planet,transform.position,dir,1.3f,.5f);
+            Vector3 shotNormal=(position-Planet.position).normalized;
+            dir=Quaternion.FromToRotation(normal,shotNormal)*dir;
+            projectile.Launch(this,Planet,position,dir,speed,currentPhase==3 ? 12 : 10,Mathf.Min(3f,Mathf.Abs(Planet.lossyScale.x)*.5f*2.1f/speed));
+        }
+        GameAudio.Play(AudioCue.Shot);
+    }
+    BossProjectile CreateProjectile()
+    {
+        GameObject obj=GameObject.CreatePrimitive(PrimitiveType.Sphere); obj.name="BossNovaBullet";
+        obj.SetActive(false); obj.GetComponent<Renderer>().sharedMaterial=projectileMat;
+        return obj.AddComponent<BossProjectile>();
+    }
+    public void ReleaseProjectile(BossProjectile projectile)
+    {
+        if(projectiles.Remove(projectile)) projectilePool.Release(projectile);
+    }
+    void ClearProjectiles()
+    {
+        foreach(BossProjectile projectile in new List<BossProjectile>(projectiles)) if(projectile!=null) ReleaseProjectile(projectile);
+    }
+    void SpawnMinionWave()
+    {
+        if(EnemySpawner.Instance==null || EscortCount>=(currentPhase==3 ? 3 : 2)) return;
+        Vector3 dir=Vector3.Cross(transform.up,transform.forward).normalized;
+        Vector3 position=BossWorldMotion.SurfacePoint(Planet,transform.position,dir,3f,.5f);
+        Enemy escort=EnemySpawner.Instance.SpawnBossMinion(gravityBody.planet,position);
+        if(escort!=null) escorts.Add(escort);
+    }
+    static void DespawnEnemy(Enemy enemy)
+    {
+        if(enemy==null || !enemy.gameObject.activeSelf || enemy.isDead) return;
+        enemy.isDead=true;
+        if(enemy.pool!=null) enemy.pool.Release(enemy.gameObject); else { enemy.gameObject.SetActive(false); Destroy(enemy.gameObject); }
+    }
+    public void TakeDamage(int damage) { TakeDamage(damage,false,DamageTextStyle.Normal); }
+    public void TakeDamage(int damage,bool isCrit) { TakeDamage(damage,isCrit,DamageTextStyle.Normal); }
+    public void TakeDamage(int damage,bool isCrit,DamageTextStyle style)
+    {
+        if(isDead || damage<=0) return;
+        hp=Mathf.Max(0,hp-damage); flashUntil=Time.time+.06f;
+        GameAudio.PlayAt(isCrit ? AudioCue.CriticalHit : AudioCue.Hit,transform.position,gravityBody.planet);
+        SpawnDamageText(damage,isCrit,style);
+        RuntimeUIBuilder.UpdateBossHP(hp,maxHp);
+        if(hp==0) { Die(); return; }
+        int phase=hp<=maxHp*.25f ? 3 : hp<=maxHp*.65f ? 2 : 1;
+        if(phase!=currentPhase)
+        {
+            SetPhase(phase); ClearProjectiles();
+            if(State!=FightState.Deploy) BeginRecovery(1.6f);
+        }
+    }
+    void SetPhase(int phase)
+    {
+        currentPhase=phase;
+        currentColor=phase==1 ? new Color(.2f,.8f,1f) : phase==2 ? new Color(1f,.6f,.2f) : new Color(1f,.25f,.4f);
+        coreMat.SetColor("_BaseColor",currentColor); coreMat.SetColor("_EmissionColor",currentColor*1.6f);
+    }
+    void SpawnDamageText(int damage,bool isCrit,DamageTextStyle style)
+    {
+        var obj=new GameObject("FloatingText"); obj.transform.position=transform.position+transform.up*.7f;
+        if(Planet!=null) obj.transform.SetParent(Planet,true);
+        obj.AddComponent<FloatingText>().SetupDamage(damage,isCrit,style);
+    }
+    void Die()
+    {
+        isDead=true; State=FightState.Dead; ClearProjectiles();
+        foreach(Enemy escort in escorts) DespawnEnemy(escort); escorts.Clear();
+        RuntimeUIBuilder.HideBossHealthBar(); Teleporter.UnlockAllTeleporters();
+        if(EnemySpawner.Instance!=null) EnemySpawner.Instance.isBossActive=false;
+        GameAudio.Play(AudioCue.Explosion);
+        if(GameManager.Instance!=null) RuntimeUIBuilder.BuildVictoryUI(GameManager.Instance);
+        gameObject.SetActive(false); Destroy(gameObject);
+    }
+    void OnDestroy()
+    {
+        if(Instance==this) Instance=null;
+        foreach(BossProjectile projectile in projectiles) if(projectile!=null) Destroy(projectile.gameObject);
+        projectiles.Clear(); projectilePool?.Clear();
+        foreach(Enemy escort in escorts) DespawnEnemy(escort);
+        foreach(Material material in new[]{coreMat,eyeMat,armorMat,warningMat,projectileMat}) if(material!=null) Destroy(material);
+    }
     void BuildVisuals()
     {
         // 1. Materials
-        coreMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        coreMat = new Material((Shader.Find("NeonWorlds/EmissiveGeometry") ?? Shader.Find("Universal Render Pipeline/Lit")));
         coreMat.EnableKeyword("_EMISSION");
 
-        eyeMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        eyeMat = new Material((Shader.Find("NeonWorlds/EmissiveGeometry") ?? Shader.Find("Universal Render Pipeline/Lit")));
         eyeMat.EnableKeyword("_EMISSION");
         eyeMat.SetColor("_BaseColor", Color.white);
-        eyeMat.SetColor("_EmissionColor", Color.white * 4f);
+        eyeMat.SetColor("_EmissionColor", Color.white * 1.6f);
 
-        armorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        armorMat = new Material((Shader.Find("NeonWorlds/EmissiveGeometry") ?? Shader.Find("Universal Render Pipeline/Lit")));
         armorMat.SetColor("_BaseColor", new Color(0.08f, 0.09f, 0.13f)); // Dark Dreadnought Steel
         armorMat.SetFloat("_Smoothness", 0.85f);
         armorMat.EnableKeyword("_EMISSION");
@@ -96,7 +297,7 @@ public class BossLeviathan : MonoBehaviour
         // 2. Colossal Central Core (3.0 scale - balanced flagship size)
         GameObject coreObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         coreObj.name = "BossCore";
-        coreObj.transform.SetParent(transform, false);
+        coreObj.transform.SetParent(visualRoot, false);
         coreObj.transform.localPosition = Vector3.zero;
         coreObj.transform.localScale = Vector3.one * 3.0f;
         Destroy(coreObj.GetComponent<Collider>());
@@ -106,7 +307,7 @@ public class BossLeviathan : MonoBehaviour
         // 3. Central Eye / Focus Lens
         GameObject eyeObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         eyeObj.name = "BossEye";
-        eyeObj.transform.SetParent(transform, false);
+        eyeObj.transform.SetParent(visualRoot, false);
         eyeObj.transform.localPosition = new Vector3(0, 0, 1.5f);
         eyeObj.transform.localScale = Vector3.one * 1.1f;
         Destroy(eyeObj.GetComponent<Collider>());
@@ -115,7 +316,7 @@ public class BossLeviathan : MonoBehaviour
 
         // 4. Hexagonal Exoskeleton Armor Plates (Horizontal tangent to planet)
         GameObject chassisObj = new GameObject("ChassisArmor");
-        chassisObj.transform.SetParent(transform, false);
+        chassisObj.transform.SetParent(visualRoot, false);
         chassisObj.transform.localPosition = new Vector3(0, 0.15f, 0);
 
         int plateCount = 6;
@@ -138,7 +339,7 @@ public class BossLeviathan : MonoBehaviour
 
         // 5. Inner Ring (4 Heavy Plasma Cannons)
         GameObject innerPivot = new GameObject("InnerRingPivot");
-        innerPivot.transform.SetParent(transform, false);
+        innerPivot.transform.SetParent(visualRoot, false);
         innerPivot.transform.localPosition = new Vector3(0, 0.1f, 0);
         innerRingPivot = innerPivot.transform;
 
@@ -162,7 +363,7 @@ public class BossLeviathan : MonoBehaviour
 
         // 6. Outer Ring (6 Gyroscopic Energy Fins)
         GameObject outerPivot = new GameObject("OuterRingPivot");
-        outerPivot.transform.SetParent(transform, false);
+        outerPivot.transform.SetParent(visualRoot, false);
         outerPivot.transform.localPosition = new Vector3(0, 0.4f, 0);
         outerPivot.transform.localRotation = Quaternion.identity;
         outerRingPivot = outerPivot.transform;
@@ -186,521 +387,5 @@ public class BossLeviathan : MonoBehaviour
         }
     }
 
-    IEnumerator IntroDeployAnimation()
-    {
-        isIntroDeploying = true;
 
-        // Start compact & hidden
-        transform.localScale = Vector3.one * 0.1f;
-        if (innerRingPivot != null) innerRingPivot.localScale = Vector3.zero;
-        if (outerRingPivot != null) outerRingPivot.localScale = Vector3.zero;
-
-        // Blinding white singularity glow
-        coreMat.SetColor("_BaseColor", Color.white);
-        coreMat.SetColor("_EmissionColor", Color.white * 10f);
-
-        // Step 1: Core singularity eruption (overshoot bounce)
-        float t = 0f;
-        while (t < 0.45f)
-        {
-            t += Time.unscaledDeltaTime;
-            float p = t / 0.45f;
-            float scale = Mathf.Lerp(0.1f, 1.2f, Mathf.Sin(p * Mathf.PI * 0.5f));
-            transform.localScale = Vector3.one * scale;
-            yield return null;
-        }
-
-        // Settle core scale
-        t = 0f;
-        while (t < 0.2f)
-        {
-            t += Time.unscaledDeltaTime;
-            transform.localScale = Vector3.Lerp(Vector3.one * 1.2f, Vector3.one, t / 0.2f);
-            yield return null;
-        }
-        transform.localScale = Vector3.one;
-
-        // Step 2: Unfold armor plates & rings deploy with mechanical rotation
-        t = 0f;
-        while (t < 0.5f)
-        {
-            t += Time.unscaledDeltaTime;
-            float p = t / 0.5f;
-            if (innerRingPivot != null) innerRingPivot.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, p);
-            if (outerRingPivot != null) outerRingPivot.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, p);
-            yield return null;
-        }
-        if (innerRingPivot != null) innerRingPivot.localScale = Vector3.one;
-        if (outerRingPivot != null) outerRingPivot.localScale = Vector3.one;
-
-        // Step 3: Transition to Electric Cyan
-        t = 0f;
-        while (t < 0.35f)
-        {
-            t += Time.unscaledDeltaTime;
-            coreMat.SetColor("_BaseColor", Color.Lerp(Color.white, currentColor, t / 0.35f));
-            coreMat.SetColor("_EmissionColor", Color.Lerp(Color.white * 10f, currentColor * 3.5f, t / 0.35f));
-            yield return null;
-        }
-
-        GameAudio.Play(AudioCue.LevelUp);
-        isIntroDeploying = false;
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.CheckPendingLevelUp();
-        }
-    }
-
-    void WipeExistingMobsAndSummonEscort()
-    {
-        // 1. Wipe minor existing mobs
-        if (Enemy.activeEnemies != null)
-        {
-            List<Enemy> mobs = new List<Enemy>(Enemy.activeEnemies);
-            foreach (var m in mobs)
-            {
-                if (m != null && !m.isDead) m.TakeDamage(9999);
-            }
-        }
-
-        // 2. Summon 2 Elite Harbingers (Arautos do Vácuo) as flanks
-        if (EnemySpawner.Instance != null && EnemySpawner.Instance.tankPrefab != null && transform.parent != null)
-        {
-            Transform planet = transform.parent;
-            Vector3 rightFlank = Vector3.Cross(transform.up, transform.forward).normalized;
-
-            for (int i = -1; i <= 1; i += 2)
-            {
-                Vector3 spawnPos = transform.position + (rightFlank * i * 6f);
-                GameObject harbinger = Instantiate(EnemySpawner.Instance.tankPrefab, spawnPos, Quaternion.identity);
-                harbinger.name = "ArautoDoVacuo_" + (i > 0 ? "Right" : "Left");
-                harbinger.transform.SetParent(planet, true);
-
-                Enemy e = harbinger.GetComponent<Enemy>();
-                if (e != null)
-                {
-                    e.maxHp = 200;
-                    e.hp = 200;
-                    e.speed = 4f;
-                    e.attackDamage = 15;
-                }
-
-                GravityBody gb = harbinger.GetComponent<GravityBody>();
-                if (gb != null) gb.planet = planet.GetComponent<PlanetGravity>();
-
-                // Tint deep purple
-                MeshRenderer mr = harbinger.GetComponentInChildren<MeshRenderer>();
-                if (mr != null)
-                {
-                    mr.material.SetColor("_BaseColor", new Color(0.6f, 0f, 1f));
-                    mr.material.SetColor("_EmissionColor", new Color(0.7f, 0.1f, 1f) * 3f);
-                }
-            }
-        }
-    }
-
-    void Update()
-    {
-        if (isDead || isIntroDeploying) return;
-
-        // Dual Gyroscopic Rotation
-        float innerSpeed = currentPhase == 1 ? 50f : (currentPhase == 2 ? 110f : 200f);
-        float outerSpeed = currentPhase == 1 ? -35f : (currentPhase == 2 ? -80f : -150f);
-
-        if (innerRingPivot != null) innerRingPivot.Rotate(0, innerSpeed * Time.deltaTime, 0, Space.Self);
-        if (outerRingPivot != null) outerRingPivot.Rotate(0, outerSpeed * Time.deltaTime, 0, Space.Self);
-
-        // Core Pulse Animation
-        float pulseSpeed = currentPhase == 3 ? 8f : (currentPhase == 2 ? 4f : 2f);
-        float pulse = Mathf.PingPong(Time.time * pulseSpeed, 1f);
-        coreMat.SetColor("_EmissionColor", currentColor * (2.5f + pulse * 3.5f));
-
-        if (GameManager.Instance == null || GameManager.Instance.player == null) return;
-        Transform player = GameManager.Instance.player;
-
-        Vector3 surfaceNormal = transform.parent != null
-            ? (transform.position - transform.parent.position).normalized
-            : transform.up;
-
-        Vector3 toPlayer = player.position - transform.position;
-        Vector3 planarDir = Vector3.ProjectOnPlane(toPlayer, surfaceNormal);
-        float distToPlayer = planarDir.magnitude;
-        planarDir = planarDir.normalized;
-
-        // Aim eye towards player
-        if (eyeTransform != null && planarDir.sqrMagnitude > 0.01f)
-        {
-            eyeTransform.localPosition = planarDir * 2.6f;
-        }
-
-        // Contact attack check
-        if (distToPlayer <= 3.2f && Time.time >= lastContactTime + contactCooldown)
-        {
-            lastContactTime = Time.time;
-            GameManager.Instance.TakeDamage(contactDamage);
-        }
-
-        // State Machine
-        if (isDashing)
-        {
-            ExecuteDash();
-        }
-        else if (isIntercepting)
-        {
-            // Warping
-        }
-        else
-        {
-            MoveTowardsPlayer(planarDir);
-            HandleAttackTimers(planarDir, surfaceNormal);
-            CheckAntiKiting(player);
-        }
-    }
-
-    void MoveTowardsPlayer(Vector3 planarDir)
-    {
-        float speed = baseSpeed * (currentPhase == 1 ? 1f : (currentPhase == 2 ? 1.4f : 1.85f));
-        float planetScale = transform.parent != null ? transform.parent.localScale.x : 1f;
-        float localSpeed = speed / planetScale;
-
-        Vector3 localMove = transform.parent != null ? transform.parent.InverseTransformDirection(planarDir) : planarDir;
-        transform.localPosition += localMove * localSpeed * Time.deltaTime;
-    }
-
-    void HandleAttackTimers(Vector3 planarDir, Vector3 surfaceNormal)
-    {
-        // 1. Radial Nova Attack
-        novaTimer -= Time.deltaTime;
-        float novaCooldown = currentPhase == 1 ? 3.6f : (currentPhase == 2 ? 2.6f : 1.6f);
-        if (novaTimer <= 0f)
-        {
-            novaTimer = novaCooldown;
-            FireRadialNova(surfaceNormal);
-        }
-
-        // 2. Dash Attack
-        if (currentPhase >= 2)
-        {
-            dashCooldownTimer -= Time.deltaTime;
-            float dashCooldown = currentPhase == 2 ? 7f : 4.5f;
-            if (dashCooldownTimer <= 0f)
-            {
-                dashCooldownTimer = dashCooldown;
-                StartCoroutine(TelegraphAndDash(planarDir));
-            }
-        }
-
-        // 3. Swarmer Escort Influx
-        spawnMinionsTimer -= Time.deltaTime;
-        float spawnCooldown = currentPhase == 1 ? 10f : (currentPhase == 2 ? 6.5f : 4.5f);
-        if (spawnMinionsTimer <= 0f)
-        {
-            spawnMinionsTimer = spawnCooldown;
-            SpawnMinionWave();
-        }
-    }
-
-    void FireRadialNova(Vector3 surfaceNormal)
-    {
-        GameAudio.Play(AudioCue.Shot);
-        int projectileCount = currentPhase == 1 ? 18 : (currentPhase == 2 ? 24 : 32);
-        float offsetAngle = (currentPhase == 3) ? Random.Range(0f, 45f) : 0f;
-
-        Transform planetTransform = transform.parent;
-        for (int i = 0; i < projectileCount; i++)
-        {
-            float angle = offsetAngle + i * (360f / projectileCount);
-            Quaternion rot = Quaternion.AngleAxis(angle, surfaceNormal);
-            Vector3 forwardOnSphere = rot * Vector3.Cross(surfaceNormal, Vector3.up);
-            if (forwardOnSphere.sqrMagnitude < 0.01f)
-            {
-                forwardOnSphere = rot * Vector3.Cross(surfaceNormal, Vector3.right);
-            }
-            forwardOnSphere = forwardOnSphere.normalized;
-
-            GameObject proj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            proj.name = "BossNovaBullet";
-            proj.transform.position = transform.position + forwardOnSphere * 3.5f;
-            proj.transform.localScale = Vector3.one * 1.1f;
-            proj.transform.forward = forwardOnSphere;
-
-            BossProjectile bp = proj.AddComponent<BossProjectile>();
-            bp.planet = planetTransform;
-            bp.speed = currentPhase == 3 ? 26f : (currentPhase == 2 ? 23f : 20f);
-            bp.damage = currentPhase == 3 ? 18 : 14;
-        }
-    }
-
-    IEnumerator TelegraphAndDash(Vector3 targetDir)
-    {
-        // Warning telegraph
-        Color oldColor = currentColor;
-        coreMat.SetColor("_BaseColor", Color.yellow);
-        coreMat.SetColor("_EmissionColor", Color.yellow * 8f);
-        GameAudio.Play(AudioCue.Hit);
-
-        yield return new WaitForSeconds(0.9f);
-
-        coreMat.SetColor("_BaseColor", oldColor);
-        isDashing = true;
-        dashDirection = targetDir;
-        dashTimer = 1.1f;
-    }
-
-    void ExecuteDash()
-    {
-        dashTimer -= Time.deltaTime;
-        float dashSpeed = 22f;
-        float planetScale = transform.parent != null ? transform.parent.localScale.x : 1f;
-        float localSpeed = dashSpeed / planetScale;
-
-        Vector3 localMove = transform.parent != null ? transform.parent.InverseTransformDirection(dashDirection) : dashDirection;
-        transform.localPosition += localMove * localSpeed * Time.deltaTime;
-
-        if (dashTimer <= 0f)
-        {
-            isDashing = false;
-        }
-    }
-
-    void SpawnMinionWave()
-    {
-        if (EnemySpawner.Instance == null || EnemySpawner.Instance.swarmerPrefab == null || transform.parent == null) return;
-        Transform planetTransform = transform.parent;
-
-        int count = currentPhase == 1 ? 2 : (currentPhase == 2 ? 4 : 6);
-        for (int i = 0; i < count; i++)
-        {
-            Vector3 spawnPos = transform.position + Random.onUnitSphere * 4.5f;
-            GameObject minion = Instantiate(EnemySpawner.Instance.swarmerPrefab, spawnPos, Quaternion.identity);
-            minion.transform.SetParent(planetTransform, true);
-            GravityBody gb = minion.GetComponent<GravityBody>();
-            if (gb != null) gb.planet = EnemySpawner.Instance.currentPlanet;
-        }
-    }
-
-    void CheckAntiKiting(Transform player)
-    {
-        if (transform.parent == null) return;
-        Vector3 toPlayerNorm = (player.position - transform.parent.position).normalized;
-        Vector3 toSelfNorm = (transform.position - transform.parent.position).normalized;
-        float angularDist = Vector3.Angle(toSelfNorm, toPlayerNorm);
-
-        if (angularDist > 120f)
-        {
-            antipodalTimer += Time.deltaTime;
-            if (antipodalTimer >= 4.0f)
-            {
-                antipodalTimer = 0f;
-                StartCoroutine(HyperspaceIntercept(player));
-            }
-        }
-        else
-        {
-            antipodalTimer = Mathf.Max(0f, antipodalTimer - Time.deltaTime);
-        }
-    }
-
-    IEnumerator HyperspaceIntercept(Transform player)
-    {
-        isIntercepting = true;
-        GameAudio.Play(AudioCue.Teleport);
-
-        Vector3 origScale = coreTransform.localScale;
-        float t = 0f;
-        while (t < 0.4f)
-        {
-            t += Time.deltaTime;
-            coreTransform.localScale = Vector3.Lerp(origScale, Vector3.zero, t / 0.4f);
-            yield return null;
-        }
-
-        Vector3 playerForward = player.forward;
-        Vector3 surfaceNormal = (player.position - transform.parent.position).normalized;
-        Vector3 aheadDir = Vector3.ProjectOnPlane(playerForward, surfaceNormal).normalized;
-        if (aheadDir.sqrMagnitude < 0.01f) aheadDir = Vector3.Cross(surfaceNormal, Vector3.up).normalized;
-
-        float planetRadius = transform.parent.localScale.x * 0.5f;
-        Vector3 newPos = player.position + aheadDir * 10f;
-        Vector3 newNormal = (newPos - transform.parent.position).normalized;
-        float offset = gravityBody != null ? gravityBody.surfaceOffset : 3.8f;
-        transform.position = transform.parent.position + newNormal * (planetRadius + offset);
-
-        t = 0f;
-        while (t < 0.3f)
-        {
-            t += Time.deltaTime;
-            coreTransform.localScale = Vector3.Lerp(Vector3.zero, origScale, t / 0.3f);
-            yield return null;
-        }
-        coreTransform.localScale = origScale;
-
-        FireRadialNova(newNormal);
-
-        isIntercepting = false;
-    }
-
-    public void TakeDamage(int damage)
-    {
-        TakeDamage(damage, false, DamageTextStyle.Normal);
-    }
-
-    public void TakeDamage(int damage, bool isCrit)
-    {
-        TakeDamage(damage, isCrit, DamageTextStyle.Normal);
-    }
-
-    public void TakeDamage(int damage, bool isCrit, DamageTextStyle style)
-    {
-        if (isDead || damage <= 0) return;
-
-        hp -= damage;
-        if (isCrit)
-        {
-            GameAudio.Play(AudioCue.CriticalHit);
-            HitStop.Trigger(0.045f, 0.05f);
-        }
-        else
-        {
-            GameAudio.PlayAt(AudioCue.Hit, transform.position, gravityBody != null ? gravityBody.planet : null);
-        }
-
-        StartCoroutine(DamageFlash());
-        SpawnDamageText(damage, isCrit, style);
-
-        RuntimeUIBuilder.UpdateBossHP(hp, maxHp);
-
-        if (currentPhase == 1 && hp <= maxHp * 0.65f)
-        {
-            SetPhase(2);
-        }
-        else if (currentPhase == 2 && hp <= maxHp * 0.25f)
-        {
-            SetPhase(3);
-        }
-
-        if (hp <= 0)
-        {
-            Die();
-        }
-    }
-
-    void SetPhase(int phase)
-    {
-        currentPhase = phase;
-        if (currentPhase == 1)
-        {
-            currentColor = new Color(0f, 0.9f, 1f); // Electric Cyan
-        }
-        else if (currentPhase == 2)
-        {
-            currentColor = new Color(1f, 0.55f, 0.05f); // Solar Flare Amber
-            GameAudio.Play(AudioCue.Explosion);
-        }
-        else if (currentPhase == 3)
-        {
-            currentColor = new Color(1f, 0.05f, 0.2f); // Hyper-Nova Crimson
-            GameAudio.Play(AudioCue.LevelUp);
-        }
-
-        if (coreMat != null)
-        {
-            coreMat.SetColor("_BaseColor", currentColor);
-            coreMat.SetColor("_EmissionColor", currentColor * 3.5f);
-        }
-    }
-
-    IEnumerator DamageFlash()
-    {
-        if (coreMat == null) yield break;
-        coreMat.SetColor("_BaseColor", Color.white);
-        coreMat.SetColor("_EmissionColor", Color.white * 6f);
-        yield return new WaitForSeconds(0.05f);
-        if (coreMat != null)
-        {
-            coreMat.SetColor("_BaseColor", currentColor);
-            coreMat.SetColor("_EmissionColor", currentColor * 3.5f);
-        }
-    }
-
-    void SpawnDamageText(int damage, bool isCrit = false, DamageTextStyle style = DamageTextStyle.Normal)
-    {
-        Vector3 surfaceNormal = transform.parent != null
-            ? (transform.position - transform.parent.position).normalized : Vector3.up;
-        Vector3 textPosition = transform.position + surfaceNormal * 3f;
-
-        GameObject txtObj = null;
-        if (GameManager.Instance != null && GameManager.Instance.floatingTextPrefab != null)
-        {
-            txtObj = Instantiate(GameManager.Instance.floatingTextPrefab, textPosition, Quaternion.identity);
-        }
-        else
-        {
-            txtObj = new GameObject("FloatingText");
-            txtObj.transform.position = textPosition;
-        }
-
-        if (transform.parent != null) txtObj.transform.SetParent(transform.parent, true);
-        FloatingText ft = txtObj.GetComponent<FloatingText>();
-        if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        ft.SetupDamage(damage, isCrit, style);
-    }
-
-    void Die()
-    {
-        isDead = true;
-        GameAudio.Play(AudioCue.Explosion);
-
-        RuntimeUIBuilder.HideBossHealthBar();
-
-        // Unlock teleporters and resume game flow
-        Teleporter.UnlockAllTeleporters();
-        if (EnemySpawner.Instance != null)
-        {
-            EnemySpawner.Instance.isBossActive = false;
-        }
-
-        // Cataclysmic explosion FX (40 debris cubes)
-        for (int i = 0; i < 40; i++)
-        {
-            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cube.transform.position = transform.position + Random.insideUnitSphere * 3.5f;
-            cube.transform.localScale = Vector3.one * Random.Range(0.6f, 1.6f);
-            cube.GetComponent<MeshRenderer>().sharedMaterial = coreMat;
-
-            Rigidbody crb = cube.AddComponent<Rigidbody>();
-            crb.useGravity = false;
-            crb.AddExplosionForce(1200f, transform.position, 6f);
-
-            GravityBody gbCube = cube.AddComponent<GravityBody>();
-            if (gbCube != null && transform.parent != null)
-            {
-                gbCube.planet = transform.parent.GetComponent<PlanetGravity>();
-            }
-            Destroy(cube, 4f);
-        }
-
-        // Massive XP cluster (35 gems)
-        if (EnemySpawner.Instance != null && EnemySpawner.Instance.gemPool != null)
-        {
-            for (int i = 0; i < 35; i++)
-            {
-                GameObject gem = EnemySpawner.Instance.gemPool.Get();
-                gem.transform.position = transform.position + Random.insideUnitSphere * 3f;
-                GravityBody gemGb = gem.GetComponent<GravityBody>();
-                if (gemGb != null && transform.parent != null)
-                {
-                    gemGb.planet = transform.parent.GetComponent<PlanetGravity>();
-                }
-            }
-        }
-
-        // Victory screen
-        if (GameManager.Instance != null)
-        {
-            RuntimeUIBuilder.BuildVictoryUI(GameManager.Instance);
-        }
-
-        Destroy(gameObject, 0.1f);
-    }
 }

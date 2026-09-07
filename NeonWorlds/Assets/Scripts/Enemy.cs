@@ -62,7 +62,7 @@ public class Enemy : MonoBehaviour
         bgObj.name = "HealthBg";
         bgObj.transform.SetParent(transform, false);
         bgObj.transform.localPosition = new Vector3(0, 1.2f, 0);
-        bgObj.transform.localScale = new Vector3(0.5f, 0.1f, 0.1f);
+        bgObj.transform.localScale = new Vector3(0.55f, 0.045f, 0.1f);
         Material bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         bgMat.SetColor("_BaseColor", Color.black);
         bgObj.GetComponent<MeshRenderer>().sharedMaterial = bgMat;
@@ -73,7 +73,7 @@ public class Enemy : MonoBehaviour
         fillObj.transform.localPosition = new Vector3(0, 0, -0.01f);
         fillObj.transform.localScale = Vector3.one;
         Material fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        fillMat.SetColor("_BaseColor", Color.red);
+        fillMat.SetColor("_BaseColor", NeonUI.Danger);
         fillObj.GetComponent<MeshRenderer>().sharedMaterial = fillMat;
         
         hpFill = fillObj.transform;
@@ -298,10 +298,16 @@ public class Enemy : MonoBehaviour
     void UpdateHealthBar()
     {
         if (hpFill != null) {
+            hpFill.parent.gameObject.SetActive(hp > 0 && hp < maxHp);
             float ratio = maxHp > 0 ? Mathf.Clamp01((float)hp / maxHp) : 0f;
             hpFill.localScale = new Vector3(ratio, 1f, 1f);
             hpFill.localPosition = new Vector3((ratio - 1f) / 2f, 0, -0.01f);
         }
+    }
+
+    void LateUpdate()
+    {
+        if(hpFill!=null && hpFill.parent.gameObject.activeSelf && Camera.main!=null) hpFill.parent.rotation=Camera.main.transform.rotation;
     }
 
     void Die()

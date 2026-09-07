@@ -21,7 +21,7 @@ public class MusicControls : MonoBehaviour
         CanvasScaler scaler = root.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1280f, 720f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.matchWidthOrHeight = 0f;
         root.AddComponent<GraphicRaycaster>();
         MusicControls controls = root.AddComponent<MusicControls>();
         controls.music = music;
@@ -30,24 +30,22 @@ public class MusicControls : MonoBehaviour
         buttonObject.transform.SetParent(root.transform, false);
         RectTransform rect = buttonObject.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one;
-        rect.anchoredPosition = new Vector2(-16f, -38f);
-        rect.sizeDelta = new Vector2(250f, 38f);
+        rect.anchoredPosition = new Vector2(-32f, -32f);
+        rect.sizeDelta = new Vector2(210f, 34f);
         controls.background = buttonObject.AddComponent<Image>();
         Button button = buttonObject.AddComponent<Button>();
         button.targetGraphic = controls.background;
         // Keep the combat controller's selection free; mouse and F8 both work during pause.
         button.navigation = new Navigation { mode = Navigation.Mode.None };
         button.onClick.AddListener(music.ToggleMusic);
-        Outline border = buttonObject.AddComponent<Outline>();
-        border.effectColor = new Color(0f, 0.9f, 1f, 0.8f);
-        border.effectDistance = new Vector2(1f, -1f);
+        NeonUI.StyleButton(button);
 
         GameObject textObject = new GameObject("Label", typeof(RectTransform));
         textObject.transform.SetParent(buttonObject.transform, false);
         controls.label = textObject.AddComponent<Text>();
         controls.label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        controls.label.fontSize = 16;
-        controls.label.fontStyle = FontStyle.Bold;
+        controls.label.fontSize = 12;
+        controls.label.fontStyle = FontStyle.Normal;
         controls.label.alignment = TextAnchor.MiddleCenter;
         controls.label.raycastTarget = false;
         RectTransform textRect = textObject.GetComponent<RectTransform>();
@@ -73,8 +71,8 @@ public class MusicControls : MonoBehaviour
     void Refresh()
     {
         lastEnabled = music.MusicEnabled;
-        label.text = lastEnabled ? "MÚSICA: LIGADA  [F8]" : "MÚSICA: DESLIGADA  [F8]";
-        label.color = lastEnabled ? Color.cyan : new Color(0.7f, 0.75f, 0.8f);
-        background.color = new Color(0.025f, 0.04f, 0.085f, 0.9f);
+        label.text = lastEnabled ? "TRILHA LIGADA    /    F8" : "TRILHA DESLIGADA    /    F8";
+        label.color = lastEnabled ? NeonUI.Cyan : NeonUI.Muted;
+        background.color = NeonUI.Surface;
     }
 }

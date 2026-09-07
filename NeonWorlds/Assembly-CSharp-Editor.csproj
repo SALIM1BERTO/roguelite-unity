@@ -56,6 +56,7 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.10f1\Editor\Data\BCLExtensions\TargetingPacks\netstandard2.1\analyzers\dotnet\roslyn4.0\cs\System.Text.Json.SourceGeneration.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Editor\BossFightRegressionChecks.cs" />
     <Compile Include="Assets\Editor\GeoWarsRefine.cs" />
     <Compile Include="Assets\Editor\ConvertTrailsToParticles.cs" />
     <Compile Include="Assets\Editor\FXSetup.cs" />
@@ -72,8 +73,10 @@
     <Compile Include="Assets\Editor\CheckOrbitState.cs" />
     <Compile Include="Assets\Editor\CheckWeapons.cs" />
     <Compile Include="Assets\Editor\AutoRunEnemies.cs" />
+    <Compile Include="Assets\Editor\Phase2BiomeChecks.cs" />
     <Compile Include="Assets\Editor\ScaleDownPlayerOnLoad.cs" />
     <Compile Include="Assets\Editor\ReapplyAllFixes.cs" />
+    <Compile Include="Assets\Editor\ShipChassisChecks.cs" />
     <Compile Include="Assets\Editor\AutoSetupEnemies.cs" />
     <Compile Include="Assets\Editor\AutoRunFixTrails.cs" />
     <Compile Include="Assets\Editor\FixDeathFX.cs" />
@@ -108,6 +111,7 @@
     <Compile Include="Assets\Editor\CreateArrowMeshOnLoadFix.cs" />
     <Compile Include="Assets\Editor\CreateArrowMeshOnLoad.cs" />
     <Compile Include="Assets\Editor\DumpHierarchy.cs" />
+    <Compile Include="Assets\Editor\VisualRegressionChecks.cs" />
     <Compile Include="Assets\Editor\NeonAudioSetup.cs" />
     <Compile Include="Assets\Editor\AutoSetupPostProcessing.cs" />
     <Compile Include="Assets\Editor\ConvertTrailsManual.cs" />
@@ -119,11 +123,12 @@
     <Compile Include="Assets\Editor\FixTrailsChild.cs" />
     <Compile Include="Assets\Editor\InspectPlayerOnLoad.cs" />
     <Compile Include="Assets\Editor\CreateTeleportFX.cs" />
-    <Compile Include="Assets\TutorialInfo\Editor\ReadmeEditor.cs" />
     <Compile Include="Assets\Editor\ApplyVisualDirectionOnLoad.cs" />
+    <Compile Include="Assets\TutorialInfo\Editor\ReadmeEditor.cs" />
     <Compile Include="Assets\Editor\ReduceSpeeds.cs" />
     <Compile Include="Assets\Editor\GalacticRebirth.cs" />
     <Compile Include="Assets\Editor\NeonWorldsRegressionChecks.cs" />
+    <Compile Include="Assets\Editor\NeonVisualSetup.cs" />
     <Compile Include="Assets\Editor\UpgradeSetup.cs" />
     <Compile Include="Assets\Editor\AutoRunPostProcessing.cs" />
     <Compile Include="Assets\Editor\MusicRegressionChecks.cs" />

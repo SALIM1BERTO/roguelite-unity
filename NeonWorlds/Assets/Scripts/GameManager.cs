@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -239,118 +240,99 @@ public class GameManager : MonoBehaviour
 
             RuntimeUIBuilder.StyleUpgradeCard(upgradeButtons[i], rarity);
 
-            Text iconText = upgradeButtons[i].transform.Find("Icon") != null ? upgradeButtons[i].transform.Find("Icon").GetComponent<Text>() : null;
 
             string levelBadge = maxLvl < 90 ? $" [NV {currentLvl + 1}/{maxLvl}]" : "";
 
             switch (type)
             {
                 case UpgradeType.Spread:
-                    if (iconText != null) { iconText.text = "»»»"; iconText.color = new Color(0.2f, 0.7f, 1f); }
                     upgradeTitles[i].text = "Tiro Múltiplo" + levelBadge;
                     upgradeDescs[i].text = "Adiciona +1 projétil aos seus disparos.";
                     break;
                 case UpgradeType.FireRate:
-                    if (iconText != null) { iconText.text = "⚡"; iconText.color = new Color(1f, 0.9f, 0f); }
                     upgradeTitles[i].text = "Tiro Rápido" + levelBadge;
                     upgradeDescs[i].text = "Aumenta a cadência de disparo em 25%.";
                     break;
                 case UpgradeType.Damage:
-                    if (iconText != null) { iconText.text = "⚔"; iconText.color = new Color(1f, 0.4f, 0.2f); }
                     upgradeTitles[i].text = "Sobrecarga de Energia" + levelBadge;
                     upgradeDescs[i].text = "Aumenta todo o dano da nave em +20%.";
                     break;
                 case UpgradeType.Speed:
-                    if (iconText != null) { iconText.text = "☄"; iconText.color = new Color(0f, 0.8f, 1f); }
                     upgradeTitles[i].text = "Propulsores" + levelBadge;
                     upgradeDescs[i].text = "Aumenta a velocidade de movimento da nave.";
                     break;
                 case UpgradeType.Magnet:
-                    if (iconText != null) { iconText.text = "🧲"; iconText.color = new Color(1f, 0f, 1f); }
                     upgradeTitles[i].text = "Magnetismo" + levelBadge;
                     upgradeDescs[i].text = "Aumenta o raio de coleta de gemas de XP.";
                     break;
                 case UpgradeType.Heal:
-                    if (iconText != null) { iconText.text = "♥"; iconText.color = new Color(1f, 0.2f, 0.4f); }
                     upgradeTitles[i].text = "Reparo de Emergência";
                     upgradeDescs[i].text = "Cura 60 HP e concede +20 de vida máxima.";
                     break;
                 case UpgradeType.Pierce:
-                    if (iconText != null) { iconText.text = "⤏"; iconText.color = new Color(0.8f, 1f, 0.8f); }
                     upgradeTitles[i].text = "Projétil Perfurante" + levelBadge;
                     upgradeDescs[i].text = "Seus tiros atravessam +1 inimigo antes de sumir.";
                     break;
                 case UpgradeType.Bounce:
-                    if (iconText != null) { iconText.text = "⤡"; iconText.color = new Color(0.2f, 1f, 0.2f); }
                     upgradeTitles[i].text = "Ricochete Cósmico" + levelBadge;
                     upgradeDescs[i].text = "Tiros quicam para o próximo inimigo mais próximo!";
                     break;
                 case UpgradeType.Critical:
-                    if (iconText != null) { iconText.text = "✦"; iconText.color = new Color(1f, 0.85f, 0.1f); }
                     upgradeTitles[i].text = "Sobrecarga Crítica" + levelBadge;
                     upgradeDescs[i].text = "+15% de chance de causar 2.5x dano crítico!";
                     break;
                 case UpgradeType.Explosive:
-                    if (iconText != null) { iconText.text = "✸"; iconText.color = new Color(1f, 0.1f, 0.1f); }
                     upgradeTitles[i].text = "Munição Explosiva" + levelBadge;
                     upgradeDescs[i].text = "Acertos geram uma explosão em área devastadora!";
                     break;
                 case UpgradeType.OrbitalMines:
-                    if (iconText != null) { iconText.text = "◉"; iconText.color = new Color(1f, 0f, 0.7f); }
                     upgradeTitles[i].text = "Minas de Matéria Escura" + levelBadge;
                     upgradeDescs[i].text = "Solta minas gravitacionais na órbita que detonam em aproximação.";
                     break;
                 case UpgradeType.SentinelDrone:
-                    if (iconText != null) { iconText.text = "🛸"; iconText.color = new Color(0f, 1f, 0.8f); }
                     upgradeTitles[i].text = "Drone Sentinela" + levelBadge;
                     upgradeDescs[i].text = "Satélite orbital que dispara feixes laser automáticos.";
                     break;
                 case UpgradeType.AegisShield:
-                    if (iconText != null) { iconText.text = "🛡"; iconText.color = new Color(0.2f, 0.6f, 1f); }
                     upgradeTitles[i].text = "Escudo Aegis" + levelBadge;
                     upgradeDescs[i].text = "Barreira protetora que anula 1 impacto e regenera com o tempo.";
                     break;
                 case UpgradeType.LifeSteal:
-                    if (iconText != null) { iconText.text = "🩸"; iconText.color = new Color(0.9f, 0.1f, 0.3f); }
                     upgradeTitles[i].text = "Nanites Vampíricos" + levelBadge;
                     upgradeDescs[i].text = "+6% de chance de restaurar vida ao derrotar inimigos.";
                     break;
                 case UpgradeType.SupernovaGatling:
-                    if (iconText != null) { iconText.text = "☀️"; iconText.color = new Color(1f, 0.85f, 0.1f); }
                     upgradeTitles[i].text = "Supernova Gatling\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
                     upgradeDescs[i].text = "Blaster dispara rajadas douradas supersônicas com micro-explosões solares em área!";
                     break;
                 case UpgradeType.NebulaFlak:
-                    if (iconText != null) { iconText.text = "🌌"; iconText.color = new Color(0.75f, 0.45f, 1f); }
                     upgradeTitles[i].text = "Canhão Nebular\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
                     upgradeDescs[i].text = "Shotgun cósmica dispara 8 fragmentos que se dividem em estilhaços ao impactar!";
                     break;
                 case UpgradeType.AntimatterLance:
-                    if (iconText != null) { iconText.text = "⚡"; iconText.color = new Color(0f, 0.9f, 1f); }
                     upgradeTitles[i].text = "Lança de Anti-Matéria\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
                     upgradeDescs[i].text = "Railgun dispara feixes perfurantes que deixam poças de radiação cósmica no planeta!";
                     break;
                 case UpgradeType.VoidVortex:
-                    if (iconText != null) { iconText.text = "🕳️"; iconText.color = new Color(0.9f, 0.1f, 1f); }
                     upgradeTitles[i].text = "Vórtice de Singularidade\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
                     upgradeDescs[i].text = "Minas orbitais geram buracos negros que sugam inimigos e implodem causando 120 de dano!";
                     break;
                 case UpgradeType.TeslaChain:
-                    if (iconText != null) { iconText.text = "🛸"; iconText.color = new Color(1f, 0.95f, 0.2f); }
                     upgradeTitles[i].text = "Rede Neural Tesla\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
                     upgradeDescs[i].text = "Drones disparam arcos elétricos que saltam em cascata para até 3 inimigos próximos!";
                     break;
                 case UpgradeType.HyperionBarrier:
-                    if (iconText != null) { iconText.text = "🛡️"; iconText.color = new Color(1f, 0.8f, 0.1f); }
                     upgradeTitles[i].text = "Barreira Hiperiônica\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
                     upgradeDescs[i].text = "Escudo Aegis emite ondas de choque douradas ao quebrar e recarregar, repelindo e esmagando alvos!";
                     break;
             }
 
+            RuntimeUIBuilder.StyleUpgrade(this, i, type);
             int index = i;
             upgradeButtons[i].onClick.RemoveAllListeners();
             upgradeButtons[i].onClick.AddListener(() => ApplyUpgrade(index));
         }
+        if(UnityEngine.EventSystems.EventSystem.current!=null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(upgradeButtons[0].gameObject);
 
         Transform rerollBtn = levelUpPanel.transform.Find("RerollBtn");
         if (rerollBtn != null)
@@ -543,101 +525,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void CreateHUD()
-    {
-        GameObject canvasObj = GameObject.Find("CanvasHUD");
-        if (canvasObj == null)
-        {
-            canvasObj = new GameObject("CanvasHUD");
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasObj.AddComponent<GraphicRaycaster>();
-            
-            // Thin XP Bar at bottom
-            GameObject xpBarBg = new GameObject("XPBarBG");
-            xpBarBg.transform.SetParent(canvasObj.transform, false);
-            Image bgImg = xpBarBg.AddComponent<Image>();
-            bgImg.color = new Color(0.1f, 0.1f, 0.15f, 1f);
-            RectTransform rtBg = xpBarBg.GetComponent<RectTransform>();
-            rtBg.anchorMin = new Vector2(0, 0); rtBg.anchorMax = new Vector2(1, 0);
-            rtBg.pivot = new Vector2(0.5f, 0); rtBg.anchoredPosition = new Vector2(0, 0);
-            rtBg.sizeDelta = new Vector2(0, 15);
-
-            GameObject xpBarFill = new GameObject("XPBarFill");
-            xpBarFill.transform.SetParent(xpBarBg.transform, false);
-            Image fillImg = xpBarFill.AddComponent<Image>();
-            fillImg.color = new Color(0f, 1f, 0.8f);
-            xpFill = xpBarFill.GetComponent<RectTransform>();
-            xpFill.anchorMin = new Vector2(0, 0); xpFill.anchorMax = new Vector2(1, 1);
-            xpFill.pivot = new Vector2(0, 0.5f); xpFill.anchoredPosition = new Vector2(0, 0);
-            xpFill.sizeDelta = new Vector2(0, 0);
-
-            // Level Text
-            GameObject lvlTextObj = new GameObject("LevelText");
-            lvlTextObj.transform.SetParent(xpBarBg.transform, false);
-            levelText = lvlTextObj.AddComponent<Text>();
-            levelText.text = "LVL 1";
-            levelText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            levelText.alignment = TextAnchor.MiddleCenter;
-            levelText.color = Color.white;
-            levelText.fontSize = 14;
-            levelText.fontStyle = FontStyle.Bold;
-            RectTransform rtTxt = lvlTextObj.GetComponent<RectTransform>();
-            rtTxt.anchorMin = new Vector2(0.5f, 0); rtTxt.anchorMax = new Vector2(0.5f, 1);
-            rtTxt.pivot = new Vector2(0.5f, 0.5f); rtTxt.anchoredPosition = new Vector2(0, 0);
-            rtTxt.sizeDelta = new Vector2(200, 0);
-
-            // Top HUD
-            GameObject topHud = new GameObject("TopHUD");
-            topHud.transform.SetParent(canvasObj.transform, false);
-            RectTransform rtTop = topHud.AddComponent<RectTransform>();
-            rtTop.anchorMin = new Vector2(0, 1); rtTop.anchorMax = new Vector2(1, 1);
-            rtTop.pivot = new Vector2(0.5f, 1); rtTop.anchoredPosition = new Vector2(0, -20);
-            rtTop.sizeDelta = new Vector2(-40, 40);
-
-            // Time Text
-            GameObject timeObj = new GameObject("TimeText");
-            timeObj.transform.SetParent(topHud.transform, false);
-            timeText = timeObj.AddComponent<Text>();
-            timeText.text = "00:00";
-            timeText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            timeText.alignment = TextAnchor.UpperCenter;
-            timeText.color = Color.white;
-            timeText.fontSize = 24;
-            timeText.fontStyle = FontStyle.Bold;
-            RectTransform timeRt = timeObj.GetComponent<RectTransform>();
-            timeRt.anchorMin = new Vector2(0.5f, 1); timeRt.anchorMax = new Vector2(0.5f, 1);
-            timeRt.pivot = new Vector2(0.5f, 1); timeRt.anchoredPosition = new Vector2(0, 0);
-            timeRt.sizeDelta = new Vector2(200, 40);
-
-            // HP Text
-            GameObject hpObj = new GameObject("HPText");
-            hpObj.transform.SetParent(topHud.transform, false);
-            hpText = hpObj.AddComponent<Text>();
-            hpText.text = "HP 100/100";
-            hpText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            hpText.alignment = TextAnchor.UpperLeft;
-            hpText.color = new Color(1f, 0.2f, 0.4f);
-            hpText.fontSize = 20;
-            hpText.fontStyle = FontStyle.Bold;
-            RectTransform hpRt = hpObj.GetComponent<RectTransform>();
-            hpRt.anchorMin = new Vector2(0, 1); hpRt.anchorMax = new Vector2(0, 1);
-            hpRt.pivot = new Vector2(0, 1); hpRt.anchoredPosition = new Vector2(0, 0);
-            hpRt.sizeDelta = new Vector2(200, 40);
-
-            // Pause / Config Button in HUD
-            GameObject pauseBtnObj = RuntimeUIBuilder.CreateStyledButton(topHud.transform, "⚙ PAUSA [ESC]", new Color(0.12f, 0.16f, 0.28f, 0.9f), Color.cyan, () => {
-                TogglePauseMenu();
-            });
-            RectTransform pbrt = pauseBtnObj.GetComponent<RectTransform>();
-            pbrt.anchorMin = new Vector2(1, 0.5f); pbrt.anchorMax = new Vector2(1, 0.5f);
-            pbrt.pivot = new Vector2(1, 0.5f); pbrt.anchoredPosition = new Vector2(-10, 0);
-            pbrt.sizeDelta = new Vector2(140, 36);
-            Text pbt = pauseBtnObj.GetComponentInChildren<Text>();
-            if (pbt != null) { pbt.fontSize = 14; pbt.color = Color.cyan; }
-        }
-    }
+    void CreateHUD() { ModernHUD.Create(this); }
 
     public bool isPaused = false;
     private GameObject pausePanel;
@@ -686,6 +574,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        UpdateFrenzy();
         bool pauseInput = false;
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             pauseInput = true;
@@ -762,12 +651,12 @@ public class GameManager : MonoBehaviour
     {
         if (xpFill != null)
         {
-            float fillPct = (float)xp / xpToNextLevel;
+            float fillPct = xpToNextLevel>0 ? Mathf.Clamp01((float)xp/xpToNextLevel) : 0f;
             xpFill.anchorMax = new Vector2(fillPct, 1);
         }
         if (levelText != null)
         {
-            levelText.text = "LVL " + level;
+            levelText.text = "NÍVEL " + level.ToString("00");
         }
     }
 
@@ -864,7 +753,7 @@ public class GameManager : MonoBehaviour
     public bool isFrenzyActive = false;
     public float frenzyTimer = 0f;
 
-    void Update()
+    void UpdateFrenzy()
     {
         if (isFrenzyActive)
         {

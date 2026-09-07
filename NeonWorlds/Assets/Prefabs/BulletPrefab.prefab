@@ -66,7 +66,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ee84ef7247c7ac943b802937d4c038b9, type: 2}
+  - {fileID: 2100000, guid: 374a4bfaf3b147c478b1157bf61e0812, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -187,6 +187,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GravityBody
   planet: {fileID: 0}
+  surfaceOffset: 1
 --- !u!114 &8028668276225131598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,4 +203,11 @@ MonoBehaviour:
   speed: 20
   lifeTime: 2
   damage: 10
+  isCritical: 0
+  pierceCount: 0
+  bounceCount: 0
+  explosive: 0
+  isSupernova: 0
+  isNebulaFlak: 0
+  isAntimatterLance: 0
   planet: {fileID: 0}

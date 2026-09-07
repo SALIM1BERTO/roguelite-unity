@@ -64,35 +64,45 @@
     <Compile Include="Assets\Scripts\RuntimeUIBuilder.cs" />
     <Compile Include="Assets\Scripts\UIManager.cs" />
     <Compile Include="Assets\Scripts\FloatingText.cs" />
+    <Compile Include="Assets\Scripts\NeonUI.cs" />
     <Compile Include="Assets\TutorialInfo\Readme.cs" />
     <Compile Include="Assets\Scripts\Enemy.cs" />
     <Compile Include="Assets\Scripts\LocalTrailAssigner.cs" />
     <Compile Include="Assets\Scripts\Teleporter.cs" />
     <Compile Include="Assets\Scripts\Orbit.cs" />
+    <Compile Include="Assets\Scripts\BossWorldMotion.cs" />
     <Compile Include="Assets\Scripts\OrbitalMines.cs" />
     <Compile Include="Assets\Scripts\Spinner.cs" />
     <Compile Include="Assets\Scripts\BossIntroSequence.cs" />
+    <Compile Include="Assets\Scripts\PlanetaryBiome.cs" />
     <Compile Include="Assets\Scripts\BossProjectile.cs" />
     <Compile Include="Assets\Scripts\PlayerShip.cs" />
     <Compile Include="Assets\Scripts\BossLeviathan.cs" />
     <Compile Include="Assets\Scripts\GameAudio.cs" />
+    <Compile Include="Assets\Scripts\CarePackageDrop.cs" />
     <Compile Include="Assets\Scripts\Bullet.cs" />
     <Compile Include="Assets\Scripts\GameMusic.cs" />
+    <Compile Include="Assets\Scripts\ModernHUD.cs" />
     <Compile Include="Assets\Scripts\CameraShake.cs" />
     <Compile Include="Assets\Scripts\MusicControls.cs" />
     <Compile Include="Assets\Scripts\MetaProgression.cs" />
     <Compile Include="Assets\Scripts\PlayerMovement.cs" />
     <Compile Include="Assets\Scripts\DamageText.cs" />
     <Compile Include="Assets\Scripts\UpgradeManager.cs" />
+    <Compile Include="Assets\Scripts\UpgradeGlyph.cs" />
     <Compile Include="Assets\Scripts\GravityBody.cs" />
     <Compile Include="Assets\Scripts\EnemySpawner.cs" />
     <Compile Include="Assets\Scripts\ShieldAegis.cs" />
+    <Compile Include="Assets\Scripts\HitStop.cs" />
     <Compile Include="Assets\Scripts\GameManager.cs" />
     <Compile Include="Assets\Scripts\CameraFollow.cs" />
     <Compile Include="Assets\Scripts\Weapon.cs" />
+    <Compile Include="Assets\Scripts\OrbitalStars.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TutorialInfo\StyleSheets\ReadmeEditor.uss" />
+    <None Include="Assets\Shaders\NeonGeometry.shader" />
+    <None Include="Assets\Shaders\NeonPlanet.shader" />
     <None Include="Assets\TutorialInfo\StyleSheets\ReadmeEditorLight.uss" />
     <None Include="Assets\TutorialInfo\StyleSheets\ReadmeEditorDark.uss" />
   </ItemGroup>

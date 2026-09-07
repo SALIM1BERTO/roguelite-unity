@@ -38,7 +38,7 @@ public static class CombatRegressionChecks
             EnemySpawner.Instance = null;
 
             var root = new GameObject("CombatRegressionChecks_Temporary");
-            root.transform.position = new Vector3(100000f, 100000f, 100000f);
+            root.transform.position = new Vector3(1000f, 1000f, 1000f);
 
             var enemyObject = new GameObject("RegressionEnemy");
             enemyObject.transform.SetParent(root.transform, false);
@@ -187,9 +187,9 @@ public static class CombatRegressionChecks
             // Both spawn offset and subsequent text movement must use radial up.
             var planetObject = new GameObject("TextRegressionPlanet");
             planetObject.transform.SetParent(root.transform, false);
-            // Keep Y close to zero so tiny frame deltas remain representable,
+            // Keep the isolated hierarchy near 1000 units so slow text motion remains representable,
             // while X/Z keep the test isolated from the live solar system.
-            planetObject.transform.position = new Vector3(100000f, 0f, 100000f);
+            planetObject.transform.position = new Vector3(1000f, 0f, 1000f);
             planetObject.transform.localScale = Vector3.one * 20f;
             PlanetGravity textPlanet = planetObject.AddComponent<PlanetGravity>();
             var southernObject = new GameObject("SouthernRegressionEnemy");

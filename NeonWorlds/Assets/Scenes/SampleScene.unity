@@ -20,13 +20,13 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 0.13, g: 0.19, b: 0.28, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -177,7 +177,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 334281491}
+  - {fileID: 2100000, guid: eedfb79ef54855945a15c1aea487fe73, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -273,7 +273,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -282,7 +282,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -628,7 +628,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 547b294e36ce7554ab77104d372e13cf, type: 2}
+  - {fileID: 2100000, guid: 865c20456b96996488772cf94459eab9, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -756,7 +756,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 334281491}
+  - {fileID: 2100000, guid: eedfb79ef54855945a15c1aea487fe73, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -852,7 +852,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -861,7 +861,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -969,7 +969,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 334281491}
+  - {fileID: 2100000, guid: eedfb79ef54855945a15c1aea487fe73, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1065,7 +1065,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -1074,7 +1074,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -1289,7 +1289,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.02, g: 0.02, b: 0.05, a: 1}
+  m_BackGroundColor: {r: 0.005, g: 0.009, b: 0.022, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -1312,7 +1312,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 55
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1403,66 +1403,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 742352288}
   smoothSpeed: 10
-  height: 45
-  distance: 30
+  height: 24
+  distance: 16
   shakeDuration: 0
   shakeMagnitude: 0.5
---- !u!21 &334281491
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Universal Render Pipeline/Unlit
-  m_Shader: {fileID: 4800000, guid: 650dd9526735d5b46b79224bc6e94025, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap:
-    RenderType: Opaque
-  disabledShaderPasses:
-  - MOTIONVECTORS
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _BaseMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _AddPrecomputedVelocity: 0
-    - _AlphaClip: 0
-    - _AlphaToMask: 0
-    - _Blend: 0
-    - _BlendOp: 0
-    - _Cull: 2
-    - _Cutoff: 0.5
-    - _DstBlend: 0
-    - _DstBlendAlpha: 0
-    - _QueueOffset: 0
-    - _SampleGI: 0
-    - _SrcBlend: 1
-    - _SrcBlendAlpha: 1
-    - _Surface: 0
-    - _XRMotionVectorsPass: 1
-    - _ZWrite: 1
-    m_Colors:
-    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &347574670
 GameObject:
   m_ObjectHideFlags: 0
@@ -1521,7 +1465,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 334281491}
+  - {fileID: 2100000, guid: eedfb79ef54855945a15c1aea487fe73, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1617,7 +1561,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -1626,7 +1570,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -1893,6 +1837,50 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 448953654}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &469426196
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 469426198}
+  - component: {fileID: 469426197}
+  m_Layer: 0
+  m_Name: OrbitalStars
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &469426197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 469426196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d9735af20deab4429d35c648bb1ae13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OrbitalStars
+--- !u!4 &469426198
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 469426196}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &661716680
 GameObject:
   m_ObjectHideFlags: 0
@@ -2062,6 +2050,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
   targetPlanet: {fileID: 1979464612}
   cooldown: 0
+  isLocked: 0
 --- !u!136 &678065146
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -2151,7 +2140,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 334281491}
+  - {fileID: 2100000, guid: eedfb79ef54855945a15c1aea487fe73, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2247,7 +2236,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -2256,7 +2245,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -2437,10 +2426,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdcb1885d188c80479fabed0a034e279, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Weapon
+  currentWeapon: 0
+  baseFireRate: 2.5
+  baseDamage: 10
+  baseSpreadCount: 1
+  basePierceCount: 0
+  baseBounceCount: 0
+  baseExplosive: 0
+  fireRateMultiplier: 1
+  damageMultiplier: 1
+  bonusDamage: 0
+  bonusSpread: 0
+  bonusPierce: 0
+  bonusBounce: 0
+  isExplosive: 0
+  critChance: 0.05
+  critMultiplier: 2.5
+  isSupernova: 0
+  isNebulaFlak: 0
+  isAntimatterLance: 0
   bulletPrefab: {fileID: 7539592328096056412, guid: 59782c54835e7a84791b41d1fcc44962, type: 3}
-  fireRate: 4.5
-  damage: 5
-  spreadCount: 1
 --- !u!114 &742352290
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2455,6 +2460,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   moveSpeed: 12
   rotationSpeed: 15
+  dashCooldown: 2
+  dashDuration: 0.22
+  dashSpeedMultiplier: 3.2
+  isDashing: 0
 --- !u!114 &742352291
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2568,7 +2577,7 @@ TrailRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Time: 0.5
+  m_Time: 0.18
   m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
@@ -2578,7 +2587,7 @@ TrailRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0.02432251
-        value: 0.85454637
+        value: 0.16
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -2599,8 +2608,8 @@ TrailRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 1, g: 1, b: 1, a: 1}
-      key1: {r: 1, g: 1, b: 1, a: 1}
+      key0: {r: 0.14901961, g: 0.8, b: 1, a: 0.6}
+      key1: {r: 0.14901961, g: 0.8, b: 1, a: 0}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
@@ -2883,7 +2892,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: bde94f582a119e44ba511600314c4cb9, type: 2}
+  - {fileID: 2100000, guid: 815a388c945b9f14d9d07064490e9b57, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3025,7 +3034,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f54908adc216ea64abd100aef4d34f9d, type: 2}
+  - {fileID: 2100000, guid: 8ed64d9528e48f24fa247f1d0ae7b48b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3130,9 +3139,13 @@ MonoBehaviour:
   timeText: {fileID: 0}
   hpText: {fileID: 0}
   matchTime: 0
+  isInvincible: 0
+  isGameOver: 0
   xp: 0
   level: 1
   magnetRadius: 5
+  availableRerolls: 0
+  lifeStealChance: 0
   levelUpPanel: {fileID: 0}
   upgradeButtons: []
   upgradeTitles: []
@@ -3140,6 +3153,9 @@ MonoBehaviour:
   xpToNextLevel: 100
   xpFill: {fileID: 0}
   levelText: {fileID: 0}
+  isPaused: 0
+  isFrenzyActive: 0
+  frenzyTimer: 0
 --- !u!4 &951130064
 Transform:
   m_ObjectHideFlags: 0
@@ -3429,6 +3445,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
   targetPlanet: {fileID: 168874018}
   cooldown: 0
+  isLocked: 0
 --- !u!136 &1010055519
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -3623,7 +3640,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 723088d6c45b3fa42947562f48dc5cf2, type: 2}
+  - {fileID: 2100000, guid: 78758aa7254ddc5439e14abdc3bdfd31, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3937,6 +3954,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
   targetPlanet: {fileID: 889799381}
   cooldown: 0
+  isLocked: 0
 --- !u!136 &1225090517
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -4016,6 +4034,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
   targetPlanet: {fileID: 1012890741}
   cooldown: 0
+  isLocked: 0
 --- !u!136 &1298891038
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -4280,6 +4299,8 @@ MonoBehaviour:
   tankPrefab: {fileID: 4064466690825920984, guid: 2a95d6fc5780d2646b2aaa45784ac856, type: 3}
   currentPlanet: {fileID: 168874018}
   spawnInterval: 1
+  bossSpawned: 0
+  isBossActive: 0
 --- !u!4 &1526524464
 Transform:
   m_ObjectHideFlags: 0
@@ -4554,7 +4575,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 334281491}
+  - {fileID: 2100000, guid: eedfb79ef54855945a15c1aea487fe73, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4650,7 +4671,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -4659,7 +4680,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0.035
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -4878,6 +4899,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
   targetPlanet: {fileID: 921025021}
   cooldown: 0
+  isLocked: 0
 --- !u!136 &1759059783
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -4967,7 +4989,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9721604005fd3b749ba2ef7eac7d5190, type: 2}
+  - {fileID: 2100000, guid: 0928105bea6156d4fb55dc4812593a7f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4998,7 +5020,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1768392260}
-  m_Mesh: {fileID: 4300000, guid: 30ba80f8e6053a743b48ef024c92cef4, type: 2}
+  m_Mesh: {fileID: 4300000, guid: c8c27a9f5e12bee4bbce29e8d89f989d, type: 2}
 --- !u!1 &1860397467
 GameObject:
   m_ObjectHideFlags: 0
@@ -5047,6 +5069,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
   targetPlanet: {fileID: 2083378327}
   cooldown: 0
+  isLocked: 0
 --- !u!136 &1860397470
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -5143,7 +5166,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e52447d6e4152234ba52cdfefa4e5310, type: 2}
+  - {fileID: 2100000, guid: 78ebfcb19139cb042a83c533c349381c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5323,7 +5346,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c5bcda829e7993945aa7bae9b4c74c16, type: 2}
+  - {fileID: 2100000, guid: 594fa049078294a428598872f15f8546, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5593,7 +5616,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 8e91e69bb29a7fa4d88363e5dea71cfb, type: 2}
+  - {fileID: 2100000, guid: dc0da236b98d0c840a687c903cd6521d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5762,3 +5785,4 @@ SceneRoots:
   - {fileID: 1979464616}
   - {fileID: 2083378331}
   - {fileID: 2032119278}
+  - {fileID: 469426198}
