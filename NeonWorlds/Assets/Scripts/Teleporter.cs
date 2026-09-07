@@ -311,6 +311,9 @@ public class Teleporter : MonoBehaviour
         EnemySpawner spawner = FindAnyObjectByType<EnemySpawner>();
         if (spawner != null) spawner.currentPlanet = targetPlanet;
 
+        // Cleanly despawn all lingering enemies from previous planets
+        Enemy.DespawnEnemiesOnOtherPlanets(targetPlanet);
+
         Teleporter[] allTps = FindObjectsByType<Teleporter>(FindObjectsInactive.Exclude);
         foreach (var tp in allTps)
         {

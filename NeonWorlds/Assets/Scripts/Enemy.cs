@@ -121,18 +121,28 @@ public class Enemy : MonoBehaviour
         if (isDead) return;
         if (GameManager.Instance == null || GameManager.Instance.player == null) return;
 
+        // Verify that the player and enemy are on the exact same planet
+        GravityBody playerBody = GameManager.Instance.player.GetComponent<GravityBody>();
+        if (playerBody == null || playerBody.planet == null) return;
+
+        Transform enemyPlanet = gravityBody != null && gravityBody.planet != null 
+            ? gravityBody.planet.transform 
+            : transform.parent;
+
+        if (enemyPlanet == null || enemyPlanet != playerBody.planet.transform) return;
+
         Transform playerTransform = GameManager.Instance.player;
         Vector3 playerPos = playerTransform.position;
-        Vector3 surfaceNormal = transform.parent != null
-            ? (transform.position - transform.parent.position).normalized
-            : transform.up;
+        Vector3 surfaceNormal = (transform.position - enemyPlanet.position).normalized;
 
         Vector3 toPlayer = playerPos - transform.position;
+        float realDist = toPlayer.magnitude; // True 3D Euclidean distance
+
         Vector3 dirToPlayer = Vector3.ProjectOnPlane(toPlayer, surfaceNormal);
         float distToPlayer = dirToPlayer.magnitude;
 
-        // 1. Attack Player Check
-        if (distToPlayer <= attackRange)
+        // 1. Attack Player Check - MUST satisfy BOTH tangent planar distance and true 3D Euclidean distance
+        if (distToPlayer <= attackRange && realDist <= attackRange * 1.5f)
         {
             if (Time.time >= lastAttackTime + attackCooldown)
             {
@@ -210,6 +220,15 @@ public class Enemy : MonoBehaviour
         if (isDead) return;
         if (obj.GetComponentInParent<PlayerMovement>() != null || obj.GetComponentInParent<PlayerShip>() != null)
         {
+            GravityBody playerBody = obj.GetComponentInParent<GravityBody>();
+            if (playerBody == null || playerBody.planet == null) return;
+
+            Transform enemyPlanet = gravityBody != null && gravityBody.planet != null 
+                ? gravityBody.planet.transform 
+                : transform.parent;
+
+            if (enemyPlanet == null || enemyPlanet != playerBody.planet.transform) return;
+
             if (Time.time >= lastAttackTime + attackCooldown)
             {
                 lastAttackTime = Time.time;
@@ -346,6 +365,40 @@ public class Enemy : MonoBehaviour
         else
         {
             Destroy(gameObject);
+        }
+    }
+
+    public void DespawnQuietly()
+    {
+        isDead = true;
+        if (pool != null)
+        {
+            pool.Release(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    public static void DespawnEnemiesOnOtherPlanets(PlanetGravity currentPlanet)
+    {
+        if (currentPlanet == null) return;
+        for (int i = activeEnemies.Count - 1; i >= 0; i--)
+        {
+            if (i >= activeEnemies.Count) continue;
+            Enemy e = activeEnemies[i];
+            if (e != null)
+            {
+                Transform enemyPlanet = e.gravityBody != null && e.gravityBody.planet != null 
+                    ? e.gravityBody.planet.transform 
+                    : e.transform.parent;
+
+                if (enemyPlanet == null || enemyPlanet != currentPlanet.transform)
+                {
+                    e.DespawnQuietly();
+                }
+            }
         }
     }
 }
