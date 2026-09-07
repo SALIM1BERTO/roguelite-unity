@@ -53,10 +53,10 @@ public class GalacticRebirthMenu
         // Material para as linhas de orbita
         Material lineMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
 
-        // 4. Configurar os 6 planetas
+        // 4. Configurar os 6 planetas espalhados em orbitas concentricas
         float[] sizes = { 70f, 30f, 120f, 50f, 200f, 90f };
-        float[] dists = { 120f, 200f, 350f, 450f, 700f, 900f };
-        float[] speeds = { 3f, 6f, 1.6f, 4f, 0.6f, 2f };
+        float[] dists = { 280f, 380f, 510f, 660f, 880f, 1120f };
+        float[] angles = { 25f, 115f, 205f, 300f, 65f, 160f };
         Color[] colors = { Color.cyan, Color.red, new Color(0.5f, 0f, 1f), Color.green, new Color(1f, 0.5f, 0f), Color.yellow };
 
         PlanetGravity[] planets = new PlanetGravity[6];
@@ -66,7 +66,8 @@ public class GalacticRebirthMenu
             GameObject p = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             p.name = "Planet_" + (i+1);
             p.transform.localScale = new Vector3(sizes[i], sizes[i], sizes[i]);
-            p.transform.position = new Vector3(dists[i], 0, 0);
+            float rad = angles[i] * Mathf.Deg2Rad;
+            p.transform.position = new Vector3(Mathf.Cos(rad) * dists[i], 0, Mathf.Sin(rad) * dists[i]);
             
             PlanetGravity pg = p.AddComponent<PlanetGravity>();
             pg.gravity = -12f;

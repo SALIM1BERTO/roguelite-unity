@@ -57,7 +57,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\XpGem.cs" />
-    <Compile Include="Assets\Scripts\DebugOrbit.cs" />
     <Compile Include="Assets\Scripts\UISelectionFeedback.cs" />
     <Compile Include="Assets\Scripts\PlanetGravity.cs" />
     <Compile Include="Assets\Scripts\SentinelDrone.cs" />
@@ -70,7 +69,6 @@
     <Compile Include="Assets\Scripts\Enemy.cs" />
     <Compile Include="Assets\Scripts\LocalTrailAssigner.cs" />
     <Compile Include="Assets\Scripts\Teleporter.cs" />
-    <Compile Include="Assets\Scripts\Orbit.cs" />
     <Compile Include="Assets\Scripts\BossWorldMotion.cs" />
     <Compile Include="Assets\Scripts\OrbitalMines.cs" />
     <Compile Include="Assets\Scripts\Spinner.cs" />

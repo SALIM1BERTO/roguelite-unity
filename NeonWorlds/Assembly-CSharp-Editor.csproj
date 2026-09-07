@@ -61,7 +61,6 @@
     <Compile Include="Assets\Editor\ConvertTrailsToParticles.cs" />
     <Compile Include="Assets\Editor\FXSetup.cs" />
     <Compile Include="Assets\Editor\ExecuteConvert.cs" />
-    <Compile Include="Assets\Editor\CheckOrbitStateAuto.cs" />
     <Compile Include="Assets\Editor\StabilizePlayerSetup.cs" />
     <Compile Include="Assets\Editor\CombatRegressionChecks.cs" />
     <Compile Include="Assets\Editor\DebugSpawner.cs" />
@@ -70,7 +69,6 @@
     <Compile Include="Assets\Editor\CameraArtSetup.cs" />
     <Compile Include="Assets\Editor\InspectPlayer.cs" />
     <Compile Include="Assets\Editor\UpdateWeaponValues.cs" />
-    <Compile Include="Assets\Editor\CheckOrbitState.cs" />
     <Compile Include="Assets\Editor\CheckWeapons.cs" />
     <Compile Include="Assets\Editor\AutoRunEnemies.cs" />
     <Compile Include="Assets\Editor\Phase2BiomeChecks.cs" />
@@ -116,7 +114,6 @@
     <Compile Include="Assets\Editor\NeonAudioSetup.cs" />
     <Compile Include="Assets\Editor\AutoSetupPostProcessing.cs" />
     <Compile Include="Assets\Editor\ConvertTrailsManual.cs" />
-    <Compile Include="Assets\Editor\FixOrbitSpeeds.cs" />
     <Compile Include="Assets\Editor\HUDSetup.cs" />
     <Compile Include="Assets\Editor\GeometryWarsSetup.cs" />
     <Compile Include="Assets\Editor\AutoReapplyAllFixes.cs" />
@@ -126,7 +123,6 @@
     <Compile Include="Assets\Editor\CreateTeleportFX.cs" />
     <Compile Include="Assets\Editor\ApplyVisualDirectionOnLoad.cs" />
     <Compile Include="Assets\TutorialInfo\Editor\ReadmeEditor.cs" />
-    <Compile Include="Assets\Editor\ReduceSpeeds.cs" />
     <Compile Include="Assets\Editor\GalacticRebirth.cs" />
     <Compile Include="Assets\Editor\NeonWorldsRegressionChecks.cs" />
     <Compile Include="Assets\Editor\NeonVisualSetup.cs" />
