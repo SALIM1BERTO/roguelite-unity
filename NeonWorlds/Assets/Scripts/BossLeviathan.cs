@@ -203,7 +203,7 @@ public class BossLeviathan : MonoBehaviour
         float t = 0f;
         while (t < 0.45f)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float p = t / 0.45f;
             float scale = Mathf.Lerp(0.1f, 1.2f, Mathf.Sin(p * Mathf.PI * 0.5f));
             transform.localScale = Vector3.one * scale;
@@ -214,7 +214,7 @@ public class BossLeviathan : MonoBehaviour
         t = 0f;
         while (t < 0.2f)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             transform.localScale = Vector3.Lerp(Vector3.one * 1.2f, Vector3.one, t / 0.2f);
             yield return null;
         }
@@ -224,7 +224,7 @@ public class BossLeviathan : MonoBehaviour
         t = 0f;
         while (t < 0.5f)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float p = t / 0.5f;
             if (innerRingPivot != null) innerRingPivot.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, p);
             if (outerRingPivot != null) outerRingPivot.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, p);
@@ -237,7 +237,7 @@ public class BossLeviathan : MonoBehaviour
         t = 0f;
         while (t < 0.35f)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             coreMat.SetColor("_BaseColor", Color.Lerp(Color.white, currentColor, t / 0.35f));
             coreMat.SetColor("_EmissionColor", Color.Lerp(Color.white * 10f, currentColor * 3.5f, t / 0.35f));
             yield return null;
@@ -245,6 +245,10 @@ public class BossLeviathan : MonoBehaviour
 
         GameAudio.Play(AudioCue.LevelUp);
         isIntroDeploying = false;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.CheckPendingLevelUp();
+        }
     }
 
     void WipeExistingMobsAndSummonEscort()

@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
 public class BossIntroSequence : MonoBehaviour
 {
+    public static bool isIntroPlaying = false;
+
     public static void StartSequence(Vector3 bossSpawnPos, PlanetGravity planet, System.Action onSpawnBoss)
     {
         GameObject introObj = new GameObject("BossIntroDirector");
@@ -11,8 +13,14 @@ public class BossIntroSequence : MonoBehaviour
         seq.StartCoroutine(seq.ExecuteSequence(bossSpawnPos, planet, onSpawnBoss));
     }
 
+    void OnDestroy()
+    {
+        isIntroPlaying = false;
+    }
+
     private IEnumerator ExecuteSequence(Vector3 bossSpawnPos, PlanetGravity planet, System.Action onSpawnBoss)
     {
+        isIntroPlaying = true;
         GameObject canvasObj = GameObject.Find("CanvasHUD");
         CameraFollow camFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : null;
 
@@ -29,9 +37,10 @@ public class BossIntroSequence : MonoBehaviour
             gRt.anchorMin = Vector2.zero; gRt.anchorMax = Vector2.one;
             gRt.sizeDelta = Vector2.zero; gRt.anchoredPosition = Vector2.zero;
 
-            // Subtle scanlines overlay
+            // Subtle scanlines overlay (raycastTarget = false so it never blocks UI clicks)
             Image gBg = glitchPanel.AddComponent<Image>();
             gBg.color = new Color(0.8f, 0f, 0.2f, 0.12f);
+            gBg.raycastTarget = false;
 
             // Warning Banner
             alertBanner = new GameObject("AlertBanner");
@@ -44,6 +53,7 @@ public class BossIntroSequence : MonoBehaviour
 
             Image bBg = alertBanner.AddComponent<Image>();
             bBg.color = new Color(0.04f, 0.04f, 0.08f, 0.92f);
+            bBg.raycastTarget = false;
             Outline bOutline = alertBanner.AddComponent<Outline>();
             bOutline.effectColor = new Color(1f, 0.1f, 0.2f, 0.9f);
             bOutline.effectDistance = new Vector2(3, -3);
@@ -61,6 +71,7 @@ public class BossIntroSequence : MonoBehaviour
             alertTxt.fontStyle = FontStyle.Bold;
             alertTxt.alignment = TextAnchor.MiddleCenter;
             alertTxt.color = new Color(1f, 0.2f, 0.3f);
+            alertTxt.raycastTarget = false;
 
             // Fullscreen Flash image (hidden initially)
             GameObject flashObj = new GameObject("BangFlash");
@@ -70,6 +81,7 @@ public class BossIntroSequence : MonoBehaviour
             fRt.sizeDelta = Vector2.zero; fRt.anchoredPosition = Vector2.zero;
             flashImg = flashObj.AddComponent<Image>();
             flashImg.color = new Color(1f, 1f, 1f, 0f);
+            flashImg.raycastTarget = false;
         }
 
         // 2. Phase 1: Pre-Spawn Tension (1.6 seconds of growing glitch and screen tremors)
@@ -79,7 +91,7 @@ public class BossIntroSequence : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             float progress = elapsed / duration;
 
             // Increasing camera rumble
@@ -94,7 +106,7 @@ public class BossIntroSequence : MonoBehaviour
                 RectTransform brt = alertBanner.GetComponent<RectTransform>();
                 brt.anchoredPosition = new Vector2(Random.Range(-4f, 4f) * progress, Random.Range(-4f, 4f) * progress);
                 Image bImg = alertBanner.GetComponent<Image>();
-                float pulse = Mathf.PingPong(Time.time * 8f, 1f);
+                float pulse = Mathf.PingPong(Time.unscaledTime * 8f, 1f);
                 bImg.color = Color.Lerp(new Color(0.04f, 0.04f, 0.08f, 0.92f), new Color(0.4f, 0f, 0.1f, 0.95f), pulse);
             }
 
@@ -141,11 +153,17 @@ public class BossIntroSequence : MonoBehaviour
             flashImg.color = new Color(1f, 1f, 1f, 0.95f);
             while (fTime < 0.35f)
             {
-                fTime += Time.deltaTime;
+                fTime += Time.unscaledDeltaTime;
                 flashImg.color = new Color(1f, 1f, 1f, Mathf.Lerp(0.95f, 0f, fTime / 0.35f));
                 yield return null;
             }
             Destroy(flashImg.gameObject);
+        }
+
+        isIntroPlaying = false;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.CheckPendingLevelUp();
         }
 
         Destroy(gameObject);
@@ -161,7 +179,7 @@ public class BossIntroSequence : MonoBehaviour
         while (t < expandDuration)
         {
             if (obj == null) yield break;
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float p = t / expandDuration;
             obj.transform.localScale = Vector3.Lerp(startScale, endScale, Mathf.Sqrt(p));
             mat.SetColor("_BaseColor", new Color(0f, 1f, 1f, 1f - p));

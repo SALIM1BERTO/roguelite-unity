@@ -87,7 +87,11 @@ public class EnemySpawner : MonoBehaviour
             bool pressB = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.bKey.wasPressedThisFrame;
             if (gameTimer >= 150f || pressB)
             {
-                SpawnBoss();
+                bool isBlocked = (GameManager.Instance != null && GameManager.Instance.IsLevelUpActive()) || Time.timeScale == 0f || BossIntroSequence.isIntroPlaying;
+                if (!isBlocked)
+                {
+                    SpawnBoss();
+                }
             }
         }
         
@@ -109,6 +113,7 @@ public class EnemySpawner : MonoBehaviour
     public void SpawnBoss()
     {
         if (bossSpawned || currentPlanet == null || GameManager.Instance == null || GameManager.Instance.player == null) return;
+        if (GameManager.Instance.IsLevelUpActive() || Time.timeScale == 0f || BossIntroSequence.isIntroPlaying) return;
         bossSpawned = true;
         isBossActive = true;
 

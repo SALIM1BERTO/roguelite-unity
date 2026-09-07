@@ -64,6 +64,12 @@ public class GameManager : MonoBehaviour
     public int xpToNextLevel = 100;
     public RectTransform xpFill;
     public Text levelText;
+    private int pendingLevelUps = 0;
+
+    public bool IsLevelUpActive()
+    {
+        return (levelUpPanel != null && levelUpPanel.activeSelf);
+    }
 
     void Awake()
     {
@@ -469,6 +475,11 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
         GameAudio.SetGameplayPaused(false);
         GameAudio.Play(AudioCue.Upgrade);
+
+        if (pendingLevelUps > 0)
+        {
+            CheckPendingLevelUp();
+        }
     }
 
     void SpawnDropPod()
@@ -653,6 +664,10 @@ public class GameManager : MonoBehaviour
             if (pausePanel != null) pausePanel.SetActive(false);
             Time.timeScale = 1f;
             GameAudio.SetGameplayPaused(false);
+            if (pendingLevelUps > 0)
+            {
+                CheckPendingLevelUp();
+            }
         }
     }
 
@@ -667,6 +682,11 @@ public class GameManager : MonoBehaviour
         if (pauseInput)
         {
             TogglePauseMenu();
+        }
+
+        if (pendingLevelUps > 0 && !isPaused && !IsLevelUpActive() && !BossIntroSequence.isIntroPlaying)
+        {
+            CheckPendingLevelUp();
         }
 
         if (Time.timeScale > 0)
@@ -699,17 +719,27 @@ public class GameManager : MonoBehaviour
     public void AddXP(int amount)
     {
         xp += amount;
-        if (xp >= xpToNextLevel)
+        while (xp >= xpToNextLevel)
         {
             xp -= xpToNextLevel;
             level++;
             xpToNextLevel = (int)(xpToNextLevel * 1.5f);
-            LevelUp();
+            pendingLevelUps++;
         }
         UpdateUI();
+        CheckPendingLevelUp();
     }
 
-    void LevelUp() { ShowLevelUpScreen(); }
+    public void CheckPendingLevelUp()
+    {
+        if (pendingLevelUps <= 0) return;
+        if (IsLevelUpActive()) return;
+        if (BossIntroSequence.isIntroPlaying) return;
+        if (isPaused) return;
+
+        pendingLevelUps--;
+        ShowLevelUpScreen();
+    }
 
     void UpdateUI()
     {
