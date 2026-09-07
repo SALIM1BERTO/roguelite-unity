@@ -273,6 +273,12 @@ public static class RuntimeUIBuilder
         RectTransform cbrt = closeBtn.GetComponent<RectTransform>();
         cbrt.anchorMin = new Vector2(0.35f, 0.03f); cbrt.anchorMax = new Vector2(0.65f, 0.09f);
         cbrt.sizeDelta = Vector2.zero; cbrt.anchoredPosition = Vector2.zero;
+
+        if (UnityEngine.EventSystems.EventSystem.current != null && tab1 != null)
+        {
+            Button tb = tab1.GetComponent<Button>();
+            if (tb != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(tb.gameObject);
+        }
     }
 
     static void CreateShipRow(Transform parent, MetaProgression.ShipChassis chassis, string name, string subtitle, string desc, Color themeColor, System.Action refreshAll)
@@ -311,6 +317,8 @@ public static class RuntimeUIBuilder
         brt.sizeDelta = Vector2.zero; brt.anchoredPosition = Vector2.zero;
         Image bImg = btnObj.AddComponent<Image>();
         Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = bImg;
+        btnObj.AddComponent<UISelectionFeedback>();
 
         GameObject bTxtObj = new GameObject("Text");
         bTxtObj.transform.SetParent(btnObj.transform, false);
@@ -401,6 +409,8 @@ public static class RuntimeUIBuilder
         brt.sizeDelta = Vector2.zero; brt.anchoredPosition = Vector2.zero;
         Image bImg = btnObj.AddComponent<Image>();
         Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = bImg;
+        btnObj.AddComponent<UISelectionFeedback>();
         GameObject bTxtObj = new GameObject("Text");
         bTxtObj.transform.SetParent(btnObj.transform, false);
         Text bText = bTxtObj.AddComponent<Text>();
@@ -450,6 +460,17 @@ public static class RuntimeUIBuilder
         Image img = btnObj.AddComponent<Image>();
         img.color = bgColor;
         Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = img;
+
+        ColorBlock colors = btn.colors;
+        colors.normalColor = bgColor;
+        colors.highlightedColor = Color.Lerp(bgColor, Color.white, 0.45f);
+        colors.selectedColor = new Color(0f, 1f, 0.95f, 1f);
+        colors.pressedColor = Color.Lerp(bgColor, Color.black, 0.35f);
+        colors.fadeDuration = 0.08f;
+        btn.colors = colors;
+
+        btnObj.AddComponent<UISelectionFeedback>();
 
         GameObject txtObj = new GameObject("Text");
         txtObj.transform.SetParent(btnObj.transform, false);
@@ -585,6 +606,8 @@ public static class RuntimeUIBuilder
             Image cardBg = optCard.AddComponent<Image>();
             Outline cardOutl = optCard.AddComponent<Outline>();
             Button btn = optCard.AddComponent<Button>();
+            btn.targetGraphic = cardBg;
+            optCard.AddComponent<UISelectionFeedback>();
 
             modeButtons[i] = btn;
             modeBackgrounds[i] = cardBg;
@@ -619,7 +642,7 @@ public static class RuntimeUIBuilder
         bhlg.spacing = 20;
         bhlg.childForceExpandWidth = true; bhlg.childForceExpandHeight = true;
 
-        CreateStyledButton(btnCont.transform, "CONTINUAR [ESC]", new Color(0.15f, 0.7f, 0.35f), Color.black, () => {
+        GameObject contBtn = CreateStyledButton(btnCont.transform, "CONTINUAR [ESC]", new Color(0.15f, 0.7f, 0.35f), Color.black, () => {
             if (onResume != null) onResume();
         });
 
@@ -641,6 +664,11 @@ public static class RuntimeUIBuilder
         });
 
         pauseMenuPanel = panel;
+        if (UnityEngine.EventSystems.EventSystem.current != null && contBtn != null)
+        {
+            Button first = contBtn.GetComponent<Button>();
+            if (first != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(first.gameObject);
+        }
         return panel;
     }
 
@@ -823,6 +851,12 @@ public static class RuntimeUIBuilder
         cbrt.anchorMax = new Vector2(0.6f, 0.085f);
         cbrt.sizeDelta = Vector2.zero;
         cbrt.anchoredPosition = Vector2.zero;
+
+        if (UnityEngine.EventSystems.EventSystem.current != null && closeBtnObj != null)
+        {
+            Button cb = closeBtnObj.GetComponent<Button>();
+            if (cb != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(cb.gameObject);
+        }
 
         return panel;
     }

@@ -78,6 +78,10 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
         GameAudio.EnsureExists();
         GameMusic.EnsureExists();
+        if (GetComponent<UIControllerManager>() == null)
+        {
+            gameObject.AddComponent<UIControllerManager>();
+        }
     }
 
     void Start()
@@ -566,6 +570,7 @@ public class GameManager : MonoBehaviour
                 pausePanel.SetActive(true);
                 RuntimeUIBuilder.RefreshPauseMenuHighlights();
             }
+            UIControllerManager.FocusFirstInteractable(pausePanel);
         }
         else
         {
@@ -585,7 +590,7 @@ public class GameManager : MonoBehaviour
         bool pauseInput = false;
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             pauseInput = true;
-        if (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame)
+        if (Gamepad.current != null && (Gamepad.current.startButton.wasPressedThisFrame || Gamepad.current.selectButton.wasPressedThisFrame))
             pauseInput = true;
 
         if (pauseInput)

@@ -43,5 +43,9 @@ public static class NeonUI
         colors.pressedColor=new Color(.7f,.9f,1f);
         colors.fadeDuration=.12f;
         button.colors=colors;
+        if (button != null && button.GetComponent<UISelectionFeedback>() == null)
+        {
+            button.gameObject.AddComponent<UISelectionFeedback>();
+        }
     }
 }
