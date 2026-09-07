@@ -30,7 +30,7 @@ public static class MetaProgression
     public static int GetUpgradeCost(string key, int baseCost)
     {
         int lvl = GetUpgradeLevel(key);
-        return baseCost * (lvl + 1);
+        return (int)(baseCost * Mathf.Pow(2.15f, lvl));
     }
 
     public static bool TryPurchaseUpgrade(string key, int maxLevel, int baseCost)
@@ -82,9 +82,9 @@ public static class MetaProgression
     {
         switch (chassis)
         {
-            case ShipChassis.Titan: return 35;
-            case ShipChassis.Spectre: return 50;
-            case ShipChassis.Architect: return 75;
+            case ShipChassis.Titan: return 50;
+            case ShipChassis.Spectre: return 100;
+            case ShipChassis.Architect: return 200;
             default: return 0;
         }
     }

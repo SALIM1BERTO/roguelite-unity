@@ -81,11 +81,11 @@ public class EnemySpawner : MonoBehaviour
         
         gameTimer += Time.deltaTime;
 
-        // Boss trigger: 2:30 or Key 'B'
+        // Boss trigger: 15:00 or Key 'B'
         if (!bossSpawned)
         {
             bool pressB = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.bKey.wasPressedThisFrame;
-            if (gameTimer >= 150f || pressB)
+            if (gameTimer >= 900f || pressB)
             {
                 bool isBlocked = (GameManager.Instance != null && GameManager.Instance.IsLevelUpActive()) || Time.timeScale == 0f || BossIntroSequence.isIntroPlaying;
                 if (!isBlocked)
@@ -194,11 +194,22 @@ public class EnemySpawner : MonoBehaviour
             Enemy e = enemy.GetComponent<Enemy>();
             e.pool = selectedPool;
             
-            // Boost enemy health and speed based on time
-            float timeMultiplier = 1f + (gameTimer / 120f); // +50% stats every 2 mins
-            if (e.baseHp == -1) e.baseHp = e.maxHp; e.maxHp = (int)(e.baseHp * timeMultiplier);
+        // Boost enemy health and speed based on time
+            // Scaling: +15% HP per minute, +2% speed per minute, +1 Damage every 2 minutes
+            float minutesPassed = gameTimer / 60f;
+            float hpMultiplier = 1f + (0.15f * minutesPassed);
+            float speedMultiplier = 1f + Mathf.Min(0.3f, 0.02f * minutesPassed);
+            
+            if (e.baseHp == -1) e.baseHp = e.maxHp; 
+            e.maxHp = (int)(e.baseHp * hpMultiplier);
             e.hp = e.maxHp;
             
+            // Assuming base speed is e.speed (we need a way to store baseSpeed if modified, but let's just scale directly on spawn if not compounding)
+            if (e.GetComponent<EnemyMove>() == null) // Assuming simple logic, speed is usually constant per prefab.
+                e.speed = e.speed * speedMultiplier;
+
+            e.attackDamage = 10 + (int)(minutesPassed / 2f);
+
             enemy.GetComponent<GravityBody>().planet = currentPlanet; enemy.transform.SetParent(currentPlanet.transform, true);
             enemy.transform.position = spawnPos;
         }

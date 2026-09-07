@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -110,6 +110,8 @@ public class PlanetaryBiome : MonoBehaviour
     public void StartHazards()
     {
         StopHazards();
+        timeOnPlanet = 0f;
+        isOverloaded = false;
         hazardRoutine = StartCoroutine(HazardLoop());
     }
 
@@ -128,6 +130,66 @@ public class PlanetaryBiome : MonoBehaviour
         activeHazards.Clear();
     }
 
+    private float timeOnPlanet = 0f;
+    private bool isOverloaded = false;
+
+    void Update()
+    {
+        if (CurrentBiome != this) return;
+        
+        timeOnPlanet += Time.deltaTime;
+
+        if (timeOnPlanet >= 210f && !isOverloaded) // 3.5 minutes
+        {
+            TriggerOverload();
+        }
+    }
+
+    void TriggerOverload()
+    {
+        isOverloaded = true;
+        
+        // Spawn dynamic teleporter near player
+        PlanetGravity[] allPlanets = FindObjectsByType<PlanetGravity>(FindObjectsSortMode.None);
+        PlanetGravity nextPlanet = null;
+        List<PlanetGravity> validPlanets = new List<PlanetGravity>();
+        foreach (var p in allPlanets) {
+            if (p != planetGravity) validPlanets.Add(p);
+        }
+        if (validPlanets.Count > 0)
+        {
+            nextPlanet = validPlanets[Random.Range(0, validPlanets.Count)];
+        }
+
+        Vector3 spawnPos = GetSurfacePointNearPlayer(8f, 12f);
+        Vector3 upNormal = (spawnPos - transform.position).normalized;
+
+        GameObject portalObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        portalObj.name = "EscapeTeleporter";
+        portalObj.transform.position = spawnPos;
+        portalObj.transform.up = upNormal;
+        portalObj.transform.SetParent(transform, true);
+        portalObj.transform.localScale = new Vector3(3f, 0.1f, 3f);
+        
+        Collider col = portalObj.GetComponent<Collider>();
+        col.isTrigger = true;
+
+        MeshRenderer mr = portalObj.GetComponent<MeshRenderer>();
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        Color portalCol = new Color(0.2f, 1f, 0.5f);
+        mat.SetColor("_BaseColor", Color.black);
+        mat.EnableKeyword("_EMISSION");
+        mat.SetColor("_EmissionColor", portalCol * 4f);
+        mr.material = mat;
+
+        Teleporter tp = portalObj.AddComponent<Teleporter>();
+        tp.targetPlanet = nextPlanet;
+
+        RuntimeUIBuilder.ShowPlanetBanner("SOBRECARGA CRÍTICA", "O NÚCLEO ESTÁ ENTRANDO EM COLAPSO! USE O PORTAL DE FUGA!", new Color(1f, 0.2f, 0.1f));
+        GameAudio.Play(AudioCue.Explosion);
+        if (CameraShake.Instance != null) CameraShake.Instance.TriggerShake(0.5f, 1f);
+    }
+
     IEnumerator HazardLoop()
     {
         yield return new WaitForSeconds(2f);
@@ -136,30 +198,33 @@ public class PlanetaryBiome : MonoBehaviour
         {
             if (GameManager.Instance != null && GameManager.Instance.player != null)
             {
+                // Speed up hazards if overloaded
+                float rateMultiplier = isOverloaded ? 0.35f : 1f;
+
                 switch (biomeType)
                 {
                     case BiomeType.InfernoPyre:
-                        yield return new WaitForSeconds(Random.Range(3.5f, 5.5f));
+                        yield return new WaitForSeconds(Random.Range(3.5f, 5.5f) * rateMultiplier);
                         SpawnMagmaGeyser();
                         break;
 
                     case BiomeType.VoidAbyss:
-                        yield return new WaitForSeconds(Random.Range(5f, 7.5f));
+                        yield return new WaitForSeconds(Random.Range(5f, 7.5f) * rateMultiplier);
                         SpawnGravityFissure();
                         break;
 
                     case BiomeType.ToxicJungle:
-                        yield return new WaitForSeconds(Random.Range(4f, 6f));
+                        yield return new WaitForSeconds(Random.Range(4f, 6f) * rateMultiplier);
                         SpawnToxicSpores();
                         break;
 
                     case BiomeType.ElectroNexus:
-                        yield return new WaitForSeconds(Random.Range(3f, 4.5f));
+                        yield return new WaitForSeconds(Random.Range(3f, 4.5f) * rateMultiplier);
                         SpawnIonicLightningStrike();
                         break;
 
                     default:
-                        yield return new WaitForSeconds(5f);
+                        yield return new WaitForSeconds(5f * rateMultiplier);
                         break;
                 }
             }

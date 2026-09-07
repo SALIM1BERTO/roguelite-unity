@@ -98,6 +98,13 @@ public class GameManager : MonoBehaviour
         }
 
         StartCarePackageScheduler();
+
+        // Remove static teleporters from scene, we use dynamic overload teleporters now
+        Teleporter[] staticTps = FindObjectsByType<Teleporter>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var tp in staticTps)
+        {
+            Destroy(tp.gameObject);
+        }
     }
 
     public int GetUpgradeLevel(UpgradeType type)
