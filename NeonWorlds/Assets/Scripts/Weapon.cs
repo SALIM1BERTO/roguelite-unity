@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 public class Weapon : MonoBehaviour
 {
-    public enum WeaponType { Blaster, Shotgun, Railgun }
+    public enum WeaponType { Blaster, Shotgun, Railgun, PlasmaFlamer }
     [Header("Tipo de Arma")]
     public WeaponType currentWeapon = WeaponType.Blaster;
 
@@ -57,6 +57,10 @@ public class Weapon : MonoBehaviour
                 baseSpreadCount = isNebulaFlak ? 8 : 5;
                 basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
+            case WeaponType.PlasmaFlamer:
+                baseFireRate = 10f; baseDamage = 2; baseSpreadCount = 1;
+                basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
+                break;
             case WeaponType.Railgun:
                 baseFireRate = isAntimatterLance ? 0.8f : 0.5f;
                 baseDamage = isAntimatterLance ? 70 : 40;
@@ -70,6 +74,7 @@ public class Weapon : MonoBehaviour
     public GameObject bulletPrefab;
     private ObjectPool<GameObject> bulletPool;
     private float fireTimer = 0f;
+    private WeaponPlasmaFlamer plasma;
 
     void Start()
     {
@@ -103,7 +108,10 @@ public class Weapon : MonoBehaviour
             if (Keyboard.current.digit3Key.wasPressedThisFrame) { currentWeapon = WeaponType.Railgun; SetupWeapon(); }
         }
 
-        if (Time.timeScale == 0) return;
+        if (Keyboard.current != null && Keyboard.current.digit4Key.wasPressedThisFrame) { currentWeapon = WeaponType.PlasmaFlamer; SetupWeapon(); }
+        if (Gamepad.current != null && Gamepad.current.dpad.right.wasPressedThisFrame)
+        { currentWeapon = (WeaponType)(((int)currentWeapon + 1) % 4); SetupWeapon(); }
+        if (Time.timeScale == 0) { if (plasma != null) plasma.StopFiring(); return; }
         fireTimer -= Time.deltaTime;
 
         Vector2 aimInput = Vector2.zero;
@@ -135,12 +143,25 @@ public class Weapon : MonoBehaviour
             }
         }
 
+        if (currentWeapon == WeaponType.PlasmaFlamer)
+        {
+            if (plasma == null) plasma = gameObject.AddComponent<WeaponPlasmaFlamer>();
+            Vector3 direction = transform.forward;
+            if (Camera.main != null && aimInput.sqrMagnitude > .01f)
+                direction = Vector3.ProjectOnPlane(Camera.main.transform.right, transform.up).normalized * aimInput.x
+                    + Vector3.ProjectOnPlane(Camera.main.transform.up, transform.up).normalized * aimInput.y;
+            plasma.SetFiring(isAiming, direction, damage, fireRateMultiplier);
+            return;
+        }
+        if (plasma != null) plasma.StopFiring();
         if (isAiming && fireTimer <= 0f)
         {
             Shoot(aimInput);
             fireTimer = 1f / (baseFireRate * fireRateMultiplier);
         }
     }
+
+    void OnDisable() { if (plasma != null) plasma.StopFiring(); }
 
     void Shoot(Vector2 aimInput)
     {

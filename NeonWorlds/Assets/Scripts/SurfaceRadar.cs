@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -35,6 +35,12 @@ public class SurfaceRadar : MonoBehaviour
     private RectTransform bossBadge;
     private Text bossText;
     private RectTransform bossArrow;
+
+    private float scanTimer = 0f;
+    private const float SCAN_INTERVAL = 0.35f;
+    private Transform cachedTp;
+    private Transform cachedDrop;
+    private Transform cachedBoss;
 
     private GravityBody gravityBody;
 
@@ -141,17 +147,24 @@ public class SurfaceRadar : MonoBehaviour
         Vector3 surfaceNormal = (playerPos - planet.position).normalized;
         float planetRadius = Mathf.Abs(planet.lossyScale.x) * 0.5f;
 
+        // Throttle expensive scene search to 3Hz
+        scanTimer -= Time.deltaTime;
+        if (scanTimer <= 0f)
+        {
+            scanTimer = SCAN_INTERVAL;
+            cachedTp = FindActiveTeleporter(planet);
+            cachedDrop = FindActiveDrop(planet);
+            cachedBoss = FindActiveBoss(planet);
+        }
+
         // --- 1. TELEPORTER TRACKING ---
-        Transform targetTp = FindActiveTeleporter(planet);
-        UpdateTracker(targetTp, planet, playerPos, surfaceNormal, planetRadius, tpChevron, tpMat, colorTeleport, tpBadge, tpText, tpArrow, "PORTAL");
+        UpdateTracker(cachedTp, planet, playerPos, surfaceNormal, planetRadius, tpChevron, tpMat, colorTeleport, tpBadge, tpText, tpArrow, "PORTAL");
 
         // --- 2. CARE PACKAGE DROP TRACKING ---
-        Transform targetDrop = FindActiveDrop(planet);
-        UpdateTracker(targetDrop, planet, playerPos, surfaceNormal, planetRadius, dropChevron, dropMat, colorDrop, dropBadge, dropText, dropArrow, "SUPRIM.");
+        UpdateTracker(cachedDrop, planet, playerPos, surfaceNormal, planetRadius, dropChevron, dropMat, colorDrop, dropBadge, dropText, dropArrow, "SUPRIM.");
 
         // --- 3. BOSS TRACKING ---
-        Transform targetBoss = FindActiveBoss(planet);
-        UpdateTracker(targetBoss, planet, playerPos, surfaceNormal, planetRadius, bossChevron, bossMat, colorBoss, bossBadge, bossText, bossArrow, "CHEFE");
+        UpdateTracker(cachedBoss, planet, playerPos, surfaceNormal, planetRadius, bossChevron, bossMat, colorBoss, bossBadge, bossText, bossArrow, "CHEFE");
     }
 
     Transform FindActiveTeleporter(Transform currentPlanet)
@@ -294,5 +307,9 @@ public class SurfaceRadar : MonoBehaviour
         if (tpBadge != null && tpBadge.gameObject.activeSelf) tpBadge.gameObject.SetActive(false);
         if (dropBadge != null && dropBadge.gameObject.activeSelf) dropBadge.gameObject.SetActive(false);
         if (bossBadge != null && bossBadge.gameObject.activeSelf) bossBadge.gameObject.SetActive(false);
+
+        cachedTp = null;
+        cachedDrop = null;
+        cachedBoss = null;
     }
 }

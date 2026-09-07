@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class CarePackageDrop : MonoBehaviour
@@ -122,13 +122,16 @@ public class CarePackageDrop : MonoBehaviour
     {
         GameAudio.Play(AudioCue.Explosion);
 
-        // Aniquilar todos os inimigos normais na tela/planeta
-        Enemy[] enemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
-        foreach (Enemy e in enemies)
+        // Aniquilar todos os inimigos normais na tela/planeta sem alocar arrays
+        for (int i = Enemy.activeEnemies.Count - 1; i >= 0; i--)
         {
-            if (e != null && !e.isDead)
+            if (i < Enemy.activeEnemies.Count)
             {
-                e.TakeDamage(180, true, DamageTextStyle.Electric);
+                Enemy e = Enemy.activeEnemies[i];
+                if (e != null && !e.isDead)
+                {
+                    e.TakeDamage(180, true, DamageTextStyle.Electric);
+                }
             }
         }
 
@@ -142,20 +145,7 @@ public class CarePackageDrop : MonoBehaviour
     void SpawnRewardText(string msg, Color col)
     {
         Vector3 textPos = transform.position + transform.up * 2f;
-        GameObject txtObj = null;
-        if (GameManager.Instance != null && GameManager.Instance.floatingTextPrefab != null)
-        {
-            txtObj = Instantiate(GameManager.Instance.floatingTextPrefab, textPos, Quaternion.identity);
-        }
-        else
-        {
-            txtObj = new GameObject("FloatingText");
-            txtObj.transform.position = textPos;
-        }
-
-        if (planet != null) txtObj.transform.SetParent(planet, true);
-        FloatingText ft = txtObj.GetComponent<FloatingText>();
-        if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        ft.Setup(msg, col, 1.4f);
+        FloatingText ft = FloatingText.Spawn(textPos, planet, 0, false, DamageTextStyle.Normal);
+        if (ft != null) ft.Setup(msg, col, 1.4f);
     }
 }

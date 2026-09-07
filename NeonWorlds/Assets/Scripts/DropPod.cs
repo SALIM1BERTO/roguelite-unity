@@ -73,10 +73,13 @@ public class DropPod : MonoBehaviour
                 gm.StartCoroutine(FrenzyRoutine(player.GetComponent<Weapon>()));
                 break;
             case BuffType.SmartBomb:
-                Enemy[] allEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
-                foreach (Enemy e in allEnemies)
+                for (int i = Enemy.activeEnemies.Count - 1; i >= 0; i--)
                 {
-                    if (!e.isDead) e.TakeDamage(9999);
+                    if (i < Enemy.activeEnemies.Count)
+                    {
+                        Enemy e = Enemy.activeEnemies[i];
+                        if (e != null && !e.isDead) e.TakeDamage(9999);
+                    }
                 }
                 break;
         }

@@ -37,9 +37,9 @@ public class EnemySpawner : MonoBehaviour
 
     void Start() { InitPools(); } void InitPools()
     {
-        standardPool = CreatePool(standardPrefab, 50, 200);
-        swarmerPool = CreatePool(swarmerPrefab, 100, 300);
-        tankPool = CreatePool(tankPrefab, 10, 50);
+        standardPool = CreatePool(standardPrefab, 100, 450);
+        swarmerPool = CreatePool(swarmerPrefab, 150, 600);
+        tankPool = CreatePool(tankPrefab, 20, 100);
 
         gemPool = new ObjectPool<GameObject>(
             createFunc: () => {
@@ -51,8 +51,8 @@ public class EnemySpawner : MonoBehaviour
             actionOnGet: (obj) => obj.SetActive(true),
             actionOnRelease: (obj) => obj.SetActive(false),
             actionOnDestroy: (obj) => Destroy(obj),
-            defaultCapacity: 100,
-            maxSize: 500
+            defaultCapacity: 150,
+            maxSize: 1000
         );
     }
 
@@ -95,16 +95,26 @@ public class EnemySpawner : MonoBehaviour
             }
         }
         
-        // Increase difficulty over time: spawn interval decreases by 5% every 10 seconds (cap at 0.2f)
-        float currentInterval = Mathf.Max(0.2f, spawnInterval * Mathf.Pow(0.95f, gameTimer / 10f));
+        // Increase difficulty over time: spawn interval decreases by 5% every 10 seconds (cap at 0.18f)
+        float currentInterval = Mathf.Max(0.18f, spawnInterval * Mathf.Pow(0.95f, gameTimer / 10f));
         
-        // Pause regular horde while Boss is active
-        if (!isBossActive)
+        // Regular horde with cluster spawning up to 350 enemies
+        if (!isBossActive && Enemy.activeEnemies.Count < 350)
         {
             timer -= Time.deltaTime;
             if (timer <= 0f)
             {
-                SpawnEnemy();
+                int spawnBatch = 1;
+                if (gameTimer >= 150f && Random.value < 0.45f)
+                {
+                    spawnBatch = Random.Range(2, 4);
+                }
+
+                for (int s = 0; s < spawnBatch; s++)
+                {
+                    if (Enemy.activeEnemies.Count >= 350) break;
+                    SpawnEnemy();
+                }
                 timer = currentInterval;
             }
         }

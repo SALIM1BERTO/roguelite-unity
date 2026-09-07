@@ -108,9 +108,9 @@ public class SentinelDrone : MonoBehaviour
             }
         }
 
-        Enemy[] enemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
-        foreach (Enemy e in enemies)
+        for (int i = 0; i < Enemy.activeEnemies.Count; i++)
         {
+            Enemy e = Enemy.activeEnemies[i];
             if (e != null && !e.isDead && e.isActiveAndEnabled)
             {
                 float d = Vector3.Distance(transform.position, e.transform.position);
@@ -258,9 +258,9 @@ public class SentinelDrone : MonoBehaviour
         {
             Enemy nextTarget = null;
             float minDist = 8f;
-            Enemy[] allEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
-            foreach (Enemy e in allEnemies)
+            for (int i = 0; i < Enemy.activeEnemies.Count; i++)
             {
+                Enemy e = Enemy.activeEnemies[i];
                 if (e != null && !e.isDead && !hitEnemies.Contains(e))
                 {
                     float dist = Vector3.Distance(currentPos, e.transform.position);

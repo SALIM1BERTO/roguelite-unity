@@ -1,32 +1,62 @@
 using UnityEngine;
 using System.Collections.Generic;
-public enum DamageTextStyle { Normal, Critical, Area, Electric }
+public enum DamageTextStyle { Normal, Critical, Area, Electric, Burn }
 public class FloatingText : MonoBehaviour
 {
     const int MaximumVisible=32;
     static readonly List<FloatingText> visible=new List<FloatingText>();
+    static readonly Queue<FloatingText> pool=new Queue<FloatingText>();
     static int sequence;
     TextMesh textMesh;
     MeshRenderer meshRenderer;
     float timer,lifetime=.7f,pixelHeight=14f;
     Vector3 drift;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetState() { visible.Clear(); sequence=0; }
+    static void ResetState() { visible.Clear(); pool.Clear(); sequence=0; }
+
+    public static FloatingText Spawn(Vector3 pos, Transform parent, int damage, bool isCrit, DamageTextStyle style=DamageTextStyle.Normal)
+    {
+        FloatingText ft = null;
+        while (pool.Count > 0 && ft == null)
+        {
+            ft = pool.Dequeue();
+        }
+        if (ft == null)
+        {
+            GameObject obj = new GameObject("FloatingText");
+            ft = obj.AddComponent<FloatingText>();
+        }
+
+        ft.transform.position = pos;
+        if (parent != null) ft.transform.SetParent(parent, true);
+        ft.gameObject.SetActive(true);
+        ft.SetupDamage(damage, isCrit, style);
+        return ft;
+    }
+
     void OnEnable()
     {
         visible.RemoveAll(item=>item==null);
         while(visible.Count>=MaximumVisible)
         {
             FloatingText oldest=visible[0]; visible.RemoveAt(0);
-            if(oldest!=null) { oldest.gameObject.SetActive(false); Destroy(oldest.gameObject); }
+            if(oldest!=null) { oldest.Recycle(); }
         }
         visible.Add(this);
     }
     void OnDisable() { visible.Remove(this); }
+
+    public void Recycle()
+    {
+        if (!gameObject.activeSelf) return;
+        gameObject.SetActive(false);
+        if (!pool.Contains(this)) pool.Enqueue(this);
+    }
+
     public void Setup(string text) { Setup(text,new Color(.92f,.98f,1f)); }
     public void SetupDamage(int damage,bool isCrit,DamageTextStyle style=DamageTextStyle.Normal)
     {
-        Color color=isCrit ? new Color(1f,.84f,.32f) : style==DamageTextStyle.Area ? new Color(.88f,.5f,1f) : style==DamageTextStyle.Electric ? new Color(.2f,.95f,1f) : new Color(.92f,.98f,1f);
+        Color color=isCrit ? new Color(1f,.84f,.32f) : style==DamageTextStyle.Burn ? new Color(1f,.4f,0f) : style==DamageTextStyle.Area ? new Color(.88f,.5f,1f) : style==DamageTextStyle.Electric ? new Color(.2f,.95f,1f) : new Color(.92f,.98f,1f);
         Setup(damage.ToString()+(isCrit ? "!" : ""),color,isCrit ? 1.2f : 1f);
     }
     public void Setup(string text,Color color,float sizeMultiplier=1f)
@@ -47,7 +77,7 @@ public class FloatingText : MonoBehaviour
     void Update()
     {
         timer+=Time.deltaTime;
-        if(timer>=lifetime) { gameObject.SetActive(false); Destroy(gameObject); return; }
+        if(timer>=lifetime) { Recycle(); return; }
         transform.position+=drift*Time.deltaTime;
         if(textMesh!=null)
         {

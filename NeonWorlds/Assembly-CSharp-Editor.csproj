@@ -59,6 +59,7 @@
     <Compile Include="Assets\Editor\BossFightRegressionChecks.cs" />
     <Compile Include="Assets\Editor\GeoWarsRefine.cs" />
     <Compile Include="Assets\Editor\ConvertTrailsToParticles.cs" />
+    <Compile Include="Assets\Editor\PlasmaPlayChecks.cs" />
     <Compile Include="Assets\Editor\FXSetup.cs" />
     <Compile Include="Assets\Editor\ExecuteConvert.cs" />
     <Compile Include="Assets\Editor\StabilizePlayerSetup.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="Assets\Editor\Phase2BiomeChecks.cs" />
     <Compile Include="Assets\Editor\ScaleDownPlayerOnLoad.cs" />
     <Compile Include="Assets\Editor\InputModuleSetup.cs" />
+    <Compile Include="Assets\Editor\PlasmaRegressionChecks.cs" />
     <Compile Include="Assets\Editor\ReapplyAllFixes.cs" />
     <Compile Include="Assets\Editor\ShipChassisChecks.cs" />
     <Compile Include="Assets\Editor\AutoSetupEnemies.cs" />

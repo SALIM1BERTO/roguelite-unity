@@ -23,6 +23,11 @@ public class Enemy : MonoBehaviour
 
     [Header("Flocking / Anti-Overlap")]
     public float avoidanceRadius = 1.2f;
+    private Vector3 cachedSeparation = Vector3.zero;
+
+    private static Material s_BgMat;
+    private static Material s_FillMat;
+    private static GameObject s_DeathFxPrefab;
 
     public ObjectPool<GameObject> pool;
     public GameObject gemPrefab;
@@ -64,18 +69,24 @@ public class Enemy : MonoBehaviour
         bgObj.transform.SetParent(transform, false);
         bgObj.transform.localPosition = new Vector3(0, 1.2f, 0);
         bgObj.transform.localScale = new Vector3(0.55f, 0.045f, 0.1f);
-        Material bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        bgMat.SetColor("_BaseColor", Color.black);
-        bgObj.GetComponent<MeshRenderer>().sharedMaterial = bgMat;
+        if (s_BgMat == null)
+        {
+            s_BgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            s_BgMat.SetColor("_BaseColor", Color.black);
+        }
+        bgObj.GetComponent<MeshRenderer>().sharedMaterial = s_BgMat;
 
         GameObject fillObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
         fillObj.name = "HealthFill";
         fillObj.transform.SetParent(bgObj.transform, false);
         fillObj.transform.localPosition = new Vector3(0, 0, -0.01f);
         fillObj.transform.localScale = Vector3.one;
-        Material fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        fillMat.SetColor("_BaseColor", NeonUI.Danger);
-        fillObj.GetComponent<MeshRenderer>().sharedMaterial = fillMat;
+        if (s_FillMat == null)
+        {
+            s_FillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            s_FillMat.SetColor("_BaseColor", NeonUI.Danger);
+        }
+        fillObj.GetComponent<MeshRenderer>().sharedMaterial = s_FillMat;
         
         hpFill = fillObj.transform;
 
@@ -151,32 +162,48 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // 2. Separation from other enemies (Anti-Overlap)
-        Vector3 separation = Vector3.zero;
-        int neighborCount = 0;
-
-        for (int i = 0; i < activeEnemies.Count; i++)
+        // 2. Separation from other enemies (Anti-Overlap) - Staggered & AABB Optimized
+        if (((GetInstanceID() + Time.frameCount) % 3) == 0)
         {
-            Enemy other = activeEnemies[i];
-            if (other == this || other == null || other.isDead) continue;
+            Vector3 myPos = transform.position;
+            Vector3 separationCalc = Vector3.zero;
+            int neighborCount = 0;
+            Transform myParent = transform.parent;
 
-            Vector3 diff = transform.position - other.transform.position;
-            Vector3 planarDiff = Vector3.ProjectOnPlane(diff, surfaceNormal);
-            float sqrDist = planarDiff.sqrMagnitude;
-
-            if (sqrDist < avoidanceRadius * avoidanceRadius && sqrDist > 0.0001f)
+            for (int i = 0; i < activeEnemies.Count; i++)
             {
-                float d = Mathf.Sqrt(sqrDist);
-                float strength = (avoidanceRadius - d) / avoidanceRadius;
-                separation += (planarDiff / d) * strength;
-                neighborCount++;
+                Enemy other = activeEnemies[i];
+                if (other == this || other == null || other.isDead) continue;
+                if (other.transform.parent != myParent) continue;
+
+                Vector3 otherPos = other.transform.position;
+                Vector3 diff = myPos - otherPos;
+
+                // Fast AABB rejection before planar projection and sqrt
+                if (Mathf.Abs(diff.x) > avoidanceRadius || Mathf.Abs(diff.y) > avoidanceRadius || Mathf.Abs(diff.z) > avoidanceRadius)
+                    continue;
+
+                Vector3 planarDiff = Vector3.ProjectOnPlane(diff, surfaceNormal);
+                float sqrDist = planarDiff.sqrMagnitude;
+
+                if (sqrDist < avoidanceRadius * avoidanceRadius && sqrDist > 0.0001f)
+                {
+                    float d = Mathf.Sqrt(sqrDist);
+                    float strength = (avoidanceRadius - d) / avoidanceRadius;
+                    separationCalc += (planarDiff / d) * strength;
+                    neighborCount++;
+                    if (neighborCount >= 6) break; // Cap to 6 nearest pushing neighbors
+                }
             }
+
+            if (neighborCount > 0)
+            {
+                separationCalc /= neighborCount;
+            }
+            cachedSeparation = separationCalc;
         }
 
-        if (neighborCount > 0)
-        {
-            separation /= neighborCount;
-        }
+        Vector3 separation = cachedSeparation;
 
         // 3. Movement direction
         Vector3 seekDir = dirToPlayer.normalized;
@@ -278,21 +305,7 @@ public class Enemy : MonoBehaviour
         Vector3 surfaceNormal = planet != null
             ? (transform.position - planet.position).normalized : Vector3.up;
         Vector3 textPosition = transform.position + surfaceNormal;
-        GameObject txtObj = null;
-        if (GameManager.Instance != null && GameManager.Instance.floatingTextPrefab != null)
-        {
-            txtObj = Instantiate(GameManager.Instance.floatingTextPrefab, textPosition, Quaternion.identity);
-        }
-        else
-        {
-            txtObj = new GameObject("FloatingText");
-            txtObj.transform.position = textPosition;
-        }
-
-        if (planet != null) txtObj.transform.SetParent(planet, true);
-        FloatingText ft = txtObj.GetComponent<FloatingText>();
-        if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        ft.SetupDamage(damage, isCrit, style);
+        FloatingText.Spawn(textPosition, planet, damage, isCrit, style);
 
         if (isDead)
         {
@@ -332,22 +345,16 @@ public class Enemy : MonoBehaviour
 
     void Die()
     {
-        if (meshR != null && originalMat != null) {
-            for (int i = 0; i < 5; i++) {
-                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cube.transform.position = transform.position + Random.insideUnitSphere * 0.5f;
-                cube.transform.localScale = Vector3.one * Random.Range(0.2f, 0.5f);
-                cube.GetComponent<MeshRenderer>().sharedMaterial = originalMat;
-                
-                Rigidbody crb = cube.AddComponent<Rigidbody>();
-                crb.useGravity = false;
-                crb.AddExplosionForce(500f, transform.position, 2f);
-                
-                GravityBody gbCube = cube.AddComponent<GravityBody>();
-                if (gravityBody != null) gbCube.planet = gravityBody.planet;
-                
-                Destroy(cube, 2f);
-            }
+        Transform planet = gravityBody != null && gravityBody.planet != null ? gravityBody.planet.transform : transform.parent;
+        if (s_DeathFxPrefab == null)
+        {
+            s_DeathFxPrefab = Resources.Load<GameObject>("EnemyDeathFX");
+        }
+        if (s_DeathFxPrefab != null)
+        {
+            GameObject pfx = Instantiate(s_DeathFxPrefab, transform.position, Quaternion.identity);
+            if (planet != null) pfx.transform.SetParent(planet, true);
+            Destroy(pfx, 1f);
         }
 
         if (GameManager.Instance != null && EnemySpawner.Instance != null && EnemySpawner.Instance.gemPool != null)

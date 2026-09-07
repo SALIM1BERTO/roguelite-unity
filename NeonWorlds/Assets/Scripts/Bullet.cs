@@ -222,12 +222,12 @@ public class Bullet : MonoBehaviour
             else if (bounceCount > 0)
             {
                 bounceCount--;
-                Enemy[] allEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
                 Enemy nearest = null;
                 float minDist = float.MaxValue;
-                foreach(Enemy e in allEnemies)
+                for (int i = 0; i < Enemy.activeEnemies.Count; i++)
                 {
-                    if (e != enemy && !e.isDead && !hitCooldowns.ContainsKey(e))
+                    Enemy e = Enemy.activeEnemies[i];
+                    if (e != null && e != enemy && !e.isDead && !hitCooldowns.ContainsKey(e))
                     {
                         float d = Vector3.Distance(transform.position, e.transform.position);
                         if (d < minDist && d < 15f)

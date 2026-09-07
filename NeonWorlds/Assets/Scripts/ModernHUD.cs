@@ -5,7 +5,8 @@ using UnityEngine.UI;
 public class ModernHUD : MonoBehaviour
 {
     GameManager game;
-    Text health, experience, clock, sector, controls;
+    Text health, experience, clock, sector, controls, weaponLabel;
+    int lastWeapon = -1;
     RectTransform healthFill;
     Image healthImage;
     CanvasGroup group;
@@ -44,7 +45,8 @@ public class ModernHUD : MonoBehaviour
         game.xpFill=NeonUI.Panel("ExperienceFill",xpBar.transform,Vector2.zero,Vector2.zero,Vector2.zero,NeonUI.Violet).rectTransform;
         game.xpFill.anchorMax=new Vector2(0,1);
         NeonUI.Label("Brand",content,"N E O N   W O R L D S",10,NeonUI.Muted,bl,new Vector2(32,16),new Vector2(300,18));
-        hud.controls=NeonUI.Label("ControlHint",content,"WASD  MOVER    /    MOUSE  MIRAR",10,NeonUI.Muted,new Vector2(1,0),new Vector2(-32,24),new Vector2(320,20),TextAnchor.MiddleRight);
+        hud.controls=NeonUI.Label("ControlHint",content,"WASD / MOUSE    •    ARMAS 1–4",10,NeonUI.Muted,new Vector2(1,0),new Vector2(-32,24),new Vector2(320,20),TextAnchor.MiddleRight);
+        hud.weaponLabel=NeonUI.Label("WeaponName",content,"",12,NeonUI.Cyan,new Vector2(1,0),new Vector2(-32,48),new Vector2(320,22),TextAnchor.MiddleRight);
         Button pause=NeonUI.Panel("Pause",root.transform,new Vector2(1,1),new Vector2(-32,-78),new Vector2(100,28),NeonUI.Surface,true).gameObject.AddComponent<Button>();
         pause.targetGraphic=pause.GetComponent<Image>(); NeonUI.StyleButton(pause);
         NeonUI.Label("Label",pause.transform,"PAUSA / ESC",10,NeonUI.Muted,new Vector2(.5f,.5f),Vector2.zero,new Vector2(100,28),TextAnchor.MiddleCenter);
@@ -62,10 +64,16 @@ public class ModernHUD : MonoBehaviour
         float ratio=game.maxHp>0 ? Mathf.Clamp01((float)game.hp/game.maxHp) : 0f;
         healthFill.anchorMax=new Vector2(Mathf.Lerp(healthFill.anchorMax.x,ratio,1f-Mathf.Exp(-12f*Time.unscaledDeltaTime)),1);
         bool connected=Gamepad.current!=null;
-        if(connected!=gamepad) { gamepad=connected; controls.text=connected ? "ANALÓGICO ESQ.  MOVER    /    DIR.  MIRAR" : "WASD  MOVER    /    MOUSE  MIRAR"; }
+        if(connected!=gamepad) { gamepad=connected; controls.text=connected ? "ANALÓGICOS MOVER / MIRAR • D-PAD → ARMA" : "WASD / MOUSE    •    ARMAS 1–4"; }
     }
     void Refresh()
     {
+        Weapon weapon=game.player!=null ? game.player.GetComponent<Weapon>() : null;
+        if (weapon!=null && weaponLabel!=null && lastWeapon!=(int)weapon.currentWeapon)
+        {
+            lastWeapon=(int)weapon.currentWeapon;
+            weaponLabel.text=weapon.currentWeapon==Weapon.WeaponType.PlasmaFlamer ? "04 / PLASMA FLAMER" : weapon.currentWeapon==Weapon.WeaponType.Railgun ? "03 / RAILGUN" : weapon.currentWeapon==Weapon.WeaponType.Shotgun ? "02 / SHOTGUN" : "01 / BLASTER";
+        }
         if(lastHp!=game.hp || lastMaxHp!=game.maxHp)
         {
             lastHp=game.hp; lastMaxHp=game.maxHp;

@@ -318,6 +318,9 @@ public class MagmaGeyserLogic : MonoBehaviour
         StartCoroutine(GeyserRoutine());
     }
 
+    private static Material s_WarnMat;
+    private static Material s_EruptMat;
+
     IEnumerator GeyserRoutine()
     {
         // Telegraph Warning: Expanding pulsing red cylinder on ground
@@ -329,12 +332,15 @@ public class MagmaGeyserLogic : MonoBehaviour
         Destroy(ring.GetComponent<Collider>());
 
         MeshRenderer mr = ring.GetComponent<MeshRenderer>();
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color warnCol = new Color(1f, 0.2f, 0f, 0.6f);
-        mat.SetColor("_BaseColor", warnCol);
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", warnCol * 2f);
-        mr.material = mat;
+        if (s_WarnMat == null)
+        {
+            s_WarnMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color warnCol = new Color(1f, 0.2f, 0f, 0.6f);
+            s_WarnMat.SetColor("_BaseColor", warnCol);
+            s_WarnMat.EnableKeyword("_EMISSION");
+            s_WarnMat.SetColor("_EmissionColor", warnCol * 2f);
+        }
+        mr.sharedMaterial = s_WarnMat;
 
         float telegraph = 1.8f;
         float t = 0f;
@@ -343,7 +349,6 @@ public class MagmaGeyserLogic : MonoBehaviour
             t += Time.deltaTime;
             float pulse = 1f + Mathf.PingPong(t * 8f, 0.35f);
             ring.transform.localScale = new Vector3((2.5f * pulse) / pScale, 0.02f / pScale, (2.5f * pulse) / pScale);
-            mat.SetColor("_EmissionColor", warnCol * (2f + t * 4f));
             yield return null;
         }
 
@@ -359,23 +364,32 @@ public class MagmaGeyserLogic : MonoBehaviour
         Destroy(pillar.GetComponent<Collider>());
 
         MeshRenderer pmr = pillar.GetComponent<MeshRenderer>();
-        Material pmat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color eruptCol = new Color(1f, 0.45f, 0.05f);
-        pmat.SetColor("_BaseColor", eruptCol);
-        pmat.EnableKeyword("_EMISSION");
-        pmat.SetColor("_EmissionColor", eruptCol * 6f);
-        pmr.material = pmat;
-
-        // Damage Tick
-        float radius = 3.0f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
-        foreach (Collider col in hits)
+        if (s_EruptMat == null)
         {
-            Enemy e = col.GetComponentInParent<Enemy>();
-            if (e != null && !e.isDead) e.TakeDamage(45, true, DamageTextStyle.Area);
+            s_EruptMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color eruptCol = new Color(1f, 0.45f, 0.05f);
+            s_EruptMat.SetColor("_BaseColor", eruptCol);
+            s_EruptMat.EnableKeyword("_EMISSION");
+            s_EruptMat.SetColor("_EmissionColor", eruptCol * 6f);
+        }
+        pmr.sharedMaterial = s_EruptMat;
 
-            BossLeviathan b = col.GetComponentInParent<BossLeviathan>();
-            if (b != null) b.TakeDamage(45, true, DamageTextStyle.Area);
+        // Damage Tick without allocating arrays
+        float radiusSqr = 3.0f * 3.0f;
+        for (int i = Enemy.activeEnemies.Count - 1; i >= 0; i--)
+        {
+            if (i < Enemy.activeEnemies.Count)
+            {
+                Enemy e = Enemy.activeEnemies[i];
+                if (e != null && !e.isDead && (e.transform.position - transform.position).sqrMagnitude <= radiusSqr)
+                {
+                    e.TakeDamage(45, true, DamageTextStyle.Area);
+                }
+            }
+        }
+        if (BossLeviathan.Instance != null && (BossLeviathan.Instance.transform.position - transform.position).sqrMagnitude <= radiusSqr)
+        {
+            BossLeviathan.Instance.TakeDamage(45, true, DamageTextStyle.Area);
         }
 
         yield return new WaitForSeconds(0.6f);
@@ -403,6 +417,7 @@ public class GravityFissureLogic : MonoBehaviour
     private float duration = 5f;
     private float pullRadius = 8f;
     private float pullForce = 6f;
+    private static Material s_VoidMat;
 
     public void Setup(Transform p, Vector3 norm, float scale)
     {
@@ -416,12 +431,15 @@ public class GravityFissureLogic : MonoBehaviour
         Destroy(core.GetComponent<Collider>());
 
         MeshRenderer mr = core.GetComponent<MeshRenderer>();
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color voidCol = new Color(0.65f, 0.05f, 1f);
-        mat.SetColor("_BaseColor", Color.black);
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", voidCol * 3.5f);
-        mr.material = mat;
+        if (s_VoidMat == null)
+        {
+            s_VoidMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color voidCol = new Color(0.65f, 0.05f, 1f);
+            s_VoidMat.SetColor("_BaseColor", Color.black);
+            s_VoidMat.EnableKeyword("_EMISSION");
+            s_VoidMat.SetColor("_EmissionColor", voidCol * 3.5f);
+        }
+        mr.sharedMaterial = s_VoidMat;
 
         GameAudio.Play(AudioCue.VoidVortexDrone);
         Destroy(gameObject, duration);
@@ -429,15 +447,20 @@ public class GravityFissureLogic : MonoBehaviour
 
     void Update()
     {
-        // Pull and damage enemies caught in fissure
-        Collider[] hits = Physics.OverlapSphere(transform.position, pullRadius);
-        foreach (Collider col in hits)
+        // Pull enemies caught in fissure without GC allocations
+        float pullRadiusSqr = pullRadius * pullRadius;
+        Vector3 center = transform.position;
+
+        for (int i = 0; i < Enemy.activeEnemies.Count; i++)
         {
-            Enemy e = col.GetComponentInParent<Enemy>();
+            Enemy e = Enemy.activeEnemies[i];
             if (e != null && !e.isDead)
             {
-                Vector3 toCenter = (transform.position - e.transform.position).normalized;
-                e.transform.position += toCenter * (pullForce * Time.deltaTime);
+                Vector3 toCenter = center - e.transform.position;
+                if (toCenter.sqrMagnitude <= pullRadiusSqr && toCenter.sqrMagnitude > 0.001f)
+                {
+                    e.transform.position += toCenter.normalized * (pullForce * Time.deltaTime);
+                }
             }
         }
     }
@@ -449,6 +472,7 @@ public class GravityFissureLogic : MonoBehaviour
 public class ToxicSporeLogic : MonoBehaviour
 {
     private bool detonated = false;
+    private static Material s_SporeMat;
 
     public void Setup(Transform p, Vector3 norm, float scale)
     {
@@ -463,12 +487,15 @@ public class ToxicSporeLogic : MonoBehaviour
         sc.isTrigger = true;
 
         MeshRenderer mr = bulb.GetComponent<MeshRenderer>();
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color toxicCol = new Color(0.1f, 1f, 0.3f);
-        mat.SetColor("_BaseColor", toxicCol);
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", toxicCol * 2.5f);
-        mr.material = mat;
+        if (s_SporeMat == null)
+        {
+            s_SporeMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color toxicCol = new Color(0.1f, 1f, 0.3f);
+            s_SporeMat.SetColor("_BaseColor", toxicCol);
+            s_SporeMat.EnableKeyword("_EMISSION");
+            s_SporeMat.SetColor("_EmissionColor", toxicCol * 2.5f);
+        }
+        mr.sharedMaterial = s_SporeMat;
 
         Destroy(gameObject, 15f);
     }
@@ -489,20 +516,23 @@ public class ToxicSporeLogic : MonoBehaviour
         detonated = true;
         GameAudio.Play(AudioCue.Explosion);
 
-        // Toxic Acid Cloud AoE
-        Collider[] hits = Physics.OverlapSphere(transform.position, 6f);
-        foreach (Collider c in hits)
+        // Toxic Acid Cloud AoE without GC arrays
+        float radiusSqr = 6f * 6f;
+        Vector3 pos = transform.position;
+        for (int i = Enemy.activeEnemies.Count - 1; i >= 0; i--)
         {
-            Enemy e = c.GetComponentInParent<Enemy>();
-            if (e != null && !e.isDead)
+            if (i < Enemy.activeEnemies.Count)
             {
-                e.TakeDamage(55, false, DamageTextStyle.Area);
+                Enemy e = Enemy.activeEnemies[i];
+                if (e != null && !e.isDead && (e.transform.position - pos).sqrMagnitude <= radiusSqr)
+                {
+                    e.TakeDamage(55, false, DamageTextStyle.Area);
+                }
             }
-            BossLeviathan b = c.GetComponentInParent<BossLeviathan>();
-            if (b != null)
-            {
-                b.TakeDamage(55, false, DamageTextStyle.Area);
-            }
+        }
+        if (BossLeviathan.Instance != null && (BossLeviathan.Instance.transform.position - pos).sqrMagnitude <= radiusSqr)
+        {
+            BossLeviathan.Instance.TakeDamage(55, false, DamageTextStyle.Area);
         }
 
         Destroy(gameObject);
@@ -514,6 +544,8 @@ public class ToxicSporeLogic : MonoBehaviour
 // ----------------------------------------------------
 public class IonicLightningLogic : MonoBehaviour
 {
+    private static Material s_BoltMat;
+
     public void Setup(Transform p, Vector3 norm, float scale)
     {
         StartCoroutine(StrikeRoutine(norm, Mathf.Max(0.01f, scale)));
@@ -550,22 +582,33 @@ public class IonicLightningLogic : MonoBehaviour
             lr.SetPosition(i, pt);
         }
 
-        Material boltMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color boltCol = new Color(1f, 0.95f, 0.2f);
-        boltMat.SetColor("_BaseColor", boltCol);
-        boltMat.EnableKeyword("_EMISSION");
-        boltMat.SetColor("_EmissionColor", boltCol * 5f);
-        lr.material = boltMat;
-
-        // Damage & Shock
-        Collider[] hits = Physics.OverlapSphere(transform.position, 3.5f);
-        foreach (Collider col in hits)
+        if (s_BoltMat == null)
         {
-            Enemy e = col.GetComponentInParent<Enemy>();
-            if (e != null && !e.isDead) e.TakeDamage(60, true, DamageTextStyle.Electric);
+            s_BoltMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color boltCol = new Color(1f, 0.95f, 0.2f);
+            s_BoltMat.SetColor("_BaseColor", boltCol);
+            s_BoltMat.EnableKeyword("_EMISSION");
+            s_BoltMat.SetColor("_EmissionColor", boltCol * 5f);
+        }
+        lr.sharedMaterial = s_BoltMat;
 
-            BossLeviathan b = col.GetComponentInParent<BossLeviathan>();
-            if (b != null) b.TakeDamage(60, true, DamageTextStyle.Electric);
+        // Damage & Shock without GC arrays
+        float radiusSqr = 3.5f * 3.5f;
+        Vector3 pos = transform.position;
+        for (int i = Enemy.activeEnemies.Count - 1; i >= 0; i--)
+        {
+            if (i < Enemy.activeEnemies.Count)
+            {
+                Enemy e = Enemy.activeEnemies[i];
+                if (e != null && !e.isDead && (e.transform.position - pos).sqrMagnitude <= radiusSqr)
+                {
+                    e.TakeDamage(60, true, DamageTextStyle.Electric);
+                }
+            }
+        }
+        if (BossLeviathan.Instance != null && (BossLeviathan.Instance.transform.position - pos).sqrMagnitude <= radiusSqr)
+        {
+            BossLeviathan.Instance.TakeDamage(60, true, DamageTextStyle.Electric);
         }
 
         yield return new WaitForSeconds(0.15f);

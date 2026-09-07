@@ -255,9 +255,7 @@ public class BossLeviathan : MonoBehaviour
     }
     void SpawnDamageText(int damage,bool isCrit,DamageTextStyle style)
     {
-        var obj=new GameObject("FloatingText"); obj.transform.position=transform.position+transform.up*.7f;
-        if(Planet!=null) obj.transform.SetParent(Planet,true);
-        obj.AddComponent<FloatingText>().SetupDamage(damage,isCrit,style);
+        FloatingText.Spawn(transform.position + transform.up * 0.7f, Planet, damage, isCrit, style);
     }
     void Die()
     {
