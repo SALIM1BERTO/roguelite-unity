@@ -38,11 +38,15 @@ public class Enemy : MonoBehaviour
     private Coroutine flashRoutine;
     private Coroutine deathRoutine;
     private GravityBody gravityBody;
-    private Vector3 originalScale = Vector3.one;
+    public Vector3 baseWorldScale = Vector3.one;
 
     void Awake()
     {
-        originalScale = transform.localScale;
+        if (gameObject.name.Contains("Tank")) baseWorldScale = new Vector3(1.5f, 1.5f, 1.5f);
+        else if (gameObject.name.Contains("Swarmer")) baseWorldScale = new Vector3(0.65f, 0.65f, 0.65f);
+        else if (transform.localScale.x >= 0.2f && transform.localScale.x <= 3.0f) baseWorldScale = transform.localScale;
+        else baseWorldScale = Vector3.one;
+
         staggerOffset = UnityEngine.Random.Range(0, 3);
         gravityBody = GetComponent<GravityBody>();
         if (gravityBody != null)
@@ -64,6 +68,22 @@ public class Enemy : MonoBehaviour
             flashMat.EnableKeyword("_EMISSION");
             flashMat.SetColor("_EmissionColor", Color.white * 2f);
         }
+        ResetScale();
+    }
+
+    public void ResetScale()
+    {
+        float pScale = 1f;
+        if (gravityBody != null && gravityBody.planet != null)
+        {
+            pScale = gravityBody.planet.transform.lossyScale.x;
+        }
+        else if (transform.parent != null)
+        {
+            pScale = transform.parent.lossyScale.x;
+        }
+        pScale = Mathf.Max(0.001f, pScale);
+        transform.localScale = baseWorldScale / pScale;
     }
 
     void Start()
@@ -96,6 +116,7 @@ public class Enemy : MonoBehaviour
 
         Destroy(bgObj.GetComponent<Collider>());
         Destroy(fillObj.GetComponent<Collider>());
+        ResetScale();
         UpdateHealthBar();
     }
 
@@ -104,7 +125,7 @@ public class Enemy : MonoBehaviour
         hp = maxHp;
         isDead = false;
         lastAttackTime = 0f;
-        transform.localScale = originalScale;
+        ResetScale();
         RestoreMaterial();
         UpdateHealthBar();
         if (!activeEnemies.Contains(this))
@@ -120,7 +141,7 @@ public class Enemy : MonoBehaviour
         flashRoutine = null;
         if (deathRoutine != null) StopCoroutine(deathRoutine);
         deathRoutine = null;
-        transform.localScale = originalScale;
+        ResetScale();
         RestoreMaterial();
     }
 
@@ -138,6 +159,8 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         if (isDead) return;
+        var status = GetComponent<StatusEffectReceiver>();
+        if (status != null && status.IsStunned) return;
         if (GameManager.Instance == null || GameManager.Instance.player == null) return;
 
         // Verify that the player and enemy are on the exact same planet
@@ -253,6 +276,8 @@ public class Enemy : MonoBehaviour
     void TryDamagePlayer(GameObject obj)
     {
         if (isDead) return;
+        var status = GetComponent<StatusEffectReceiver>();
+        if (status != null && status.IsStunned) return;
         if (obj.GetComponentInParent<PlayerMovement>() != null || obj.GetComponentInParent<PlayerShip>() != null)
         {
             GravityBody playerBody = obj.GetComponentInParent<GravityBody>();
@@ -289,6 +314,8 @@ public class Enemy : MonoBehaviour
     {
         if (isDead || !isActiveAndEnabled || damage <= 0) return;
         
+        var receiver = GetComponent<StatusEffectReceiver>();
+        if (receiver != null) damage = receiver.ModifyIncomingDamage(damage);
         hp -= damage;
         isDead = hp <= 0;
         if (isCrit)
@@ -372,7 +399,7 @@ public class Enemy : MonoBehaviour
             meshR.sharedMaterial = flashMat;
         }
 
-        Vector3 baseScale = originalScale;
+        Vector3 startLocalScale = transform.localScale;
         float duration = 0.14f;
         float elapsed = 0f;
 
@@ -383,11 +410,11 @@ public class Enemy : MonoBehaviour
             // Squash & implode into ground: horizontal expands slightly, vertical flattens quickly
             float horiz = Mathf.Lerp(1.15f, 0f, t * t);
             float vert = Mathf.Lerp(1f, 0f, Mathf.Sqrt(t));
-            transform.localScale = new Vector3(baseScale.x * horiz, baseScale.y * vert, baseScale.z * horiz);
+            transform.localScale = new Vector3(startLocalScale.x * horiz, startLocalScale.y * vert, startLocalScale.z * horiz);
             yield return null;
         }
 
-        transform.localScale = baseScale;
+        ResetScale();
         RestoreMaterial();
 
         // Spawn XP Gem

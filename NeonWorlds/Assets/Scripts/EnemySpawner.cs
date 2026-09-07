@@ -146,9 +146,10 @@ public class EnemySpawner : MonoBehaviour
         GameObject obj=swarmerPool.Get();
         Enemy enemy=obj.GetComponent<Enemy>(); enemy.pool=swarmerPool;
         enemy.maxHp=45; enemy.hp=45; enemy.speed=3.2f; enemy.attackDamage=8;
-        obj.transform.SetParent(arena.transform,true); obj.transform.position=position;
-        GravityBody body=obj.GetComponent<GravityBody>();
-        if(body!=null) { body.planet=arena; body.SnapToSurface(); }
+        obj.transform.SetParent(arena.transform, true); obj.transform.position = position;
+        GravityBody body = obj.GetComponent<GravityBody>();
+        if (body != null) { body.planet = arena; body.SnapToSurface(); }
+        enemy.ResetScale();
         return enemy;
     }
 
@@ -217,10 +218,10 @@ public class EnemySpawner : MonoBehaviour
             if (e.baseSpeed < 0) e.baseSpeed = e.speed;
             e.speed = e.baseSpeed * speedMultiplier;
 
-            e.attackDamage = 10 + (int)(minutesPassed / 2f);
-
-            enemy.GetComponent<GravityBody>().planet = currentPlanet; enemy.transform.SetParent(currentPlanet.transform, true);
+            enemy.GetComponent<GravityBody>().planet = currentPlanet;
+            enemy.transform.SetParent(currentPlanet.transform, true);
             enemy.transform.position = spawnPos;
+            e.ResetScale();
         }
     }
 }
