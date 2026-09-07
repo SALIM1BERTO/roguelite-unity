@@ -24,6 +24,7 @@ public class Enemy : MonoBehaviour
     [Header("Flocking / Anti-Overlap")]
     public float avoidanceRadius = 1.2f;
     private Vector3 cachedSeparation = Vector3.zero;
+    private int staggerOffset;
 
     private static Material s_BgMat;
     private static Material s_FillMat;
@@ -40,6 +41,7 @@ public class Enemy : MonoBehaviour
 
     void Awake()
     {
+        staggerOffset = UnityEngine.Random.Range(0, 3);
         gravityBody = GetComponent<GravityBody>();
         if (gravityBody != null)
         {
@@ -163,7 +165,7 @@ public class Enemy : MonoBehaviour
         }
 
         // 2. Separation from other enemies (Anti-Overlap) - Staggered & AABB Optimized
-        if (((GetInstanceID() + Time.frameCount) % 3) == 0)
+        if (((staggerOffset + Time.frameCount) % 3) == 0)
         {
             Vector3 myPos = transform.position;
             Vector3 separationCalc = Vector3.zero;
