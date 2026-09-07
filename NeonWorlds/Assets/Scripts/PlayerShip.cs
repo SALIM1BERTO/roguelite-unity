@@ -76,6 +76,11 @@ public class PlayerShip : MonoBehaviour
 
         GravityBody gravityBody = GetComponent<GravityBody>();
         if (gravityBody != null) gravityBody.surfaceOffset = surfaceOffset;
+
+        if (GetComponent<SurfaceRadar>() == null)
+        {
+            gameObject.AddComponent<SurfaceRadar>();
+        }
     }
 
     public void ApplyWorldScale()
