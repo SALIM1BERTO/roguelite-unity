@@ -87,4 +87,133 @@ public class PlayerShip : MonoBehaviour
         Vector3 localScale = new Vector3(1f / parentScale.x, 1f / parentScale.y, 1f / parentScale.z);
         if (transform.localScale != localScale) transform.localScale = localScale;
     }
+
+    public void ApplyChassisVisual(MetaProgression.ShipChassis chassis)
+    {
+        if (visual == null) Configure();
+        if (visual == null) visual = transform.Find("ShipVisual");
+        if (visual == null) return;
+
+        // Clean up any previously attached addon meshes
+        Transform oldAddon = visual.Find("ChassisAddon");
+        if (oldAddon != null) Destroy(oldAddon.gameObject);
+
+        MeshRenderer mr = visual.GetComponent<MeshRenderer>();
+        Material chassisMat = null;
+        if (mr != null && mr.material != null)
+        {
+            chassisMat = mr.material;
+        }
+
+        GameObject addon = new GameObject("ChassisAddon");
+        addon.transform.SetParent(visual, false);
+        addon.transform.localPosition = Vector3.zero;
+        addon.transform.localRotation = Quaternion.identity;
+
+        switch (chassis)
+        {
+            case MetaProgression.ShipChassis.Interceptor:
+                visual.localScale = new Vector3(0.8f, 0.8f, 0.85f);
+                if (chassisMat != null)
+                {
+                    Color cyan = new Color(0f, 0.9f, 1f);
+                    chassisMat.SetColor("_BaseColor", cyan);
+                    chassisMat.EnableKeyword("_EMISSION");
+                    chassisMat.SetColor("_EmissionColor", cyan * 2.5f);
+                }
+                break;
+
+            case MetaProgression.ShipChassis.Titan:
+                visual.localScale = new Vector3(1.15f, 0.85f, 0.85f);
+                Color amber = new Color(1f, 0.55f, 0.05f);
+                if (chassisMat != null)
+                {
+                    chassisMat.SetColor("_BaseColor", amber);
+                    chassisMat.EnableKeyword("_EMISSION");
+                    chassisMat.SetColor("_EmissionColor", amber * 2.5f);
+                }
+
+                // Dual heavy booster pods / armor plates on the flanks
+                Material armorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                armorMat.SetColor("_BaseColor", new Color(0.2f, 0.2f, 0.25f));
+                armorMat.EnableKeyword("_EMISSION");
+                armorMat.SetColor("_EmissionColor", amber * 1.5f);
+
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    GameObject booster = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    booster.name = "TitanArmorPlate";
+                    booster.transform.SetParent(addon.transform, false);
+                    booster.transform.localPosition = new Vector3(side * 0.65f, 0f, -0.2f);
+                    booster.transform.localScale = new Vector3(0.35f, 0.25f, 0.7f);
+                    Destroy(booster.GetComponent<Collider>());
+                    booster.GetComponent<MeshRenderer>().material = armorMat;
+                }
+                break;
+
+            case MetaProgression.ShipChassis.Spectre:
+                visual.localScale = new Vector3(0.65f, 0.65f, 1.15f);
+                Color violet = new Color(0.85f, 0.2f, 1f);
+                if (chassisMat != null)
+                {
+                    chassisMat.SetColor("_BaseColor", violet);
+                    chassisMat.EnableKeyword("_EMISSION");
+                    chassisMat.SetColor("_EmissionColor", violet * 3.2f);
+                }
+
+                // Twin razor stealth winglets
+                Material finMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                finMat.SetColor("_BaseColor", Color.black);
+                finMat.EnableKeyword("_EMISSION");
+                finMat.SetColor("_EmissionColor", violet * 2f);
+
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    GameObject fin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    fin.name = "SpectreFin";
+                    fin.transform.SetParent(addon.transform, false);
+                    fin.transform.localPosition = new Vector3(side * 0.55f, 0.05f, 0.1f);
+                    fin.transform.localRotation = Quaternion.Euler(0, side * 25f, side * 35f);
+                    fin.transform.localScale = new Vector3(0.12f, 0.12f, 0.75f);
+                    Destroy(fin.GetComponent<Collider>());
+                    fin.GetComponent<MeshRenderer>().material = finMat;
+                }
+                break;
+
+            case MetaProgression.ShipChassis.Architect:
+                visual.localScale = new Vector3(0.85f, 0.85f, 0.85f);
+                Color emerald = new Color(0f, 0.95f, 0.45f);
+                if (chassisMat != null)
+                {
+                    chassisMat.SetColor("_BaseColor", emerald);
+                    chassisMat.EnableKeyword("_EMISSION");
+                    chassisMat.SetColor("_EmissionColor", emerald * 2.5f);
+                }
+
+                // Rotating orbital energy halo ring
+                GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                halo.name = "ArchitectHalo";
+                halo.transform.SetParent(addon.transform, false);
+                halo.transform.localPosition = new Vector3(0f, 0.15f, 0f);
+                halo.transform.localScale = new Vector3(1.6f, 0.025f, 1.6f);
+                Destroy(halo.GetComponent<Collider>());
+
+                Material haloMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                haloMat.SetColor("_BaseColor", emerald);
+                haloMat.EnableKeyword("_EMISSION");
+                haloMat.SetColor("_EmissionColor", emerald * 4f);
+                halo.GetComponent<MeshRenderer>().material = haloMat;
+
+                halo.AddComponent<ArchitectHaloRotator>();
+                break;
+        }
+    }
+}
+
+public class ArchitectHaloRotator : MonoBehaviour
+{
+    void Update()
+    {
+        transform.Rotate(0, 120f * Time.deltaTime, 0);
+    }
 }

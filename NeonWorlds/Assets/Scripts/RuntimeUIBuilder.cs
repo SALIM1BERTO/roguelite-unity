@@ -261,7 +261,7 @@ public static class RuntimeUIBuilder
         GameObject panel = new GameObject("HangarPanel");
         panel.transform.SetParent(canvasTransform, false);
         RectTransform panelRt = panel.AddComponent<RectTransform>();
-        panelRt.anchorMin = new Vector2(0.08f, 0.08f); panelRt.anchorMax = new Vector2(0.92f, 0.92f);
+        panelRt.anchorMin = new Vector2(0.06f, 0.05f); panelRt.anchorMax = new Vector2(0.94f, 0.95f);
         panelRt.sizeDelta = Vector2.zero; panelRt.anchoredPosition = Vector2.zero;
 
         Image bg = panel.AddComponent<Image>();
@@ -274,50 +274,234 @@ public static class RuntimeUIBuilder
         GameObject header = new GameObject("Header");
         header.transform.SetParent(panel.transform, false);
         RectTransform hrt = header.AddComponent<RectTransform>();
-        hrt.anchorMin = new Vector2(0f, 0.86f); hrt.anchorMax = new Vector2(1f, 0.98f);
+        hrt.anchorMin = new Vector2(0f, 0.90f); hrt.anchorMax = new Vector2(1f, 0.98f);
         hrt.sizeDelta = Vector2.zero; hrt.anchoredPosition = Vector2.zero;
         Text hText = header.AddComponent<Text>();
         hText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        hText.text = "HANGAR ESTELAR - MELHORIAS PERMANENTES";
-        hText.fontSize = 28; hText.alignment = TextAnchor.MiddleCenter; hText.color = new Color(0f, 0.9f, 1f);
+        hText.text = "HANGAR ESTELAR - FROTAS & OFICINA";
+        hText.fontSize = 26; hText.alignment = TextAnchor.MiddleCenter; hText.color = new Color(0f, 0.9f, 1f);
 
         // Currency Display
         GameObject currency = new GameObject("CurrencyText");
         currency.transform.SetParent(panel.transform, false);
         RectTransform crt = currency.AddComponent<RectTransform>();
-        crt.anchorMin = new Vector2(0.05f, 0.78f); crt.anchorMax = new Vector2(0.95f, 0.85f);
+        crt.anchorMin = new Vector2(0.05f, 0.84f); crt.anchorMax = new Vector2(0.95f, 0.89f);
         crt.sizeDelta = Vector2.zero; crt.anchoredPosition = Vector2.zero;
         Text cText = currency.AddComponent<Text>();
         cText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        cText.fontSize = 22; cText.alignment = TextAnchor.MiddleCenter;
-        System.Action refreshCurrency = () => {
-            cText.text = $"<color=#00ffcc>★ Células Estelares Disponíveis: {MetaProgression.GetStarCores()}</color>";
+        cText.fontSize = 20; cText.alignment = TextAnchor.MiddleCenter;
+
+        // Tab Navigation Container
+        GameObject tabsObj = new GameObject("TabBar");
+        tabsObj.transform.SetParent(panel.transform, false);
+        RectTransform tabRt = tabsObj.AddComponent<RectTransform>();
+        tabRt.anchorMin = new Vector2(0.18f, 0.76f); tabRt.anchorMax = new Vector2(0.82f, 0.82f);
+        tabRt.sizeDelta = Vector2.zero; tabRt.anchoredPosition = Vector2.zero;
+        HorizontalLayoutGroup thlg = tabsObj.AddComponent<HorizontalLayoutGroup>();
+        thlg.spacing = 15; thlg.childForceExpandWidth = true; thlg.childForceExpandHeight = true;
+
+        // Content Area
+        GameObject contentArea = new GameObject("ContentArea");
+        contentArea.transform.SetParent(panel.transform, false);
+        RectTransform cart = contentArea.AddComponent<RectTransform>();
+        cart.anchorMin = new Vector2(0.05f, 0.12f); cart.anchorMax = new Vector2(0.95f, 0.74f);
+        cart.sizeDelta = Vector2.zero; cart.anchoredPosition = Vector2.zero;
+
+        // Container 1: Ships
+        GameObject shipsCont = new GameObject("ShipsList");
+        shipsCont.transform.SetParent(contentArea.transform, false);
+        RectTransform srt = shipsCont.AddComponent<RectTransform>();
+        srt.anchorMin = Vector2.zero; srt.anchorMax = Vector2.one; srt.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup svlg = shipsCont.AddComponent<VerticalLayoutGroup>();
+        svlg.spacing = 8; svlg.childControlHeight = true; svlg.childControlWidth = true;
+        svlg.childForceExpandWidth = true; svlg.childForceExpandHeight = false;
+
+        // Container 2: Upgrades
+        GameObject upgCont = new GameObject("UpgradeList");
+        upgCont.transform.SetParent(contentArea.transform, false);
+        RectTransform urt = upgCont.AddComponent<RectTransform>();
+        urt.anchorMin = Vector2.zero; urt.anchorMax = Vector2.one; urt.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup uvlg = upgCont.AddComponent<VerticalLayoutGroup>();
+        uvlg.spacing = 8; uvlg.childControlHeight = true; uvlg.childControlWidth = true;
+        uvlg.childForceExpandWidth = true; uvlg.childForceExpandHeight = false;
+
+        System.Action refreshAll = null;
+
+        System.Action rebuildShips = () => {
+            foreach (Transform child in shipsCont.transform) Object.Destroy(child.gameObject);
+            CreateShipRow(shipsCont.transform, MetaProgression.ShipChassis.Interceptor,
+                "INTERCEPTOR", "CAÇA VELOZ • PADRÃO",
+                "+15% Vel. Movimento | +10% Cadência de Tiro | Arma: Blaster de Plasma",
+                new Color(0f, 0.9f, 1f), refreshAll);
+
+            CreateShipRow(shipsCont.transform, MetaProgression.ShipChassis.Titan,
+                "TITAN DREADNOUGHT", "ENCOURAÇADO PESADO",
+                "+60 HP Máximo | +25% Dano Global | -15% Vel. Movimento | Arma: Shotgun",
+                new Color(1f, 0.55f, 0.05f), refreshAll);
+
+            CreateShipRow(shipsCont.transform, MetaProgression.ShipChassis.Spectre,
+                "SPECTRE", "FANTASMA ESPECTRAL",
+                "+25% Chance Crítica | +50% Dano Crítico | -25 HP Máximo | Arma: Railgun",
+                new Color(0.85f, 0.2f, 1f), refreshAll);
+
+            CreateShipRow(shipsCont.transform, MetaProgression.ShipChassis.Architect,
+                "ARCHITECT", "ENGENHEIRO NEXUS",
+                "Inicia com Drone Sentinela Nv 1 | +3m Ímã de Gemas | Halo Orbital | Arma: Blaster",
+                new Color(0f, 0.95f, 0.45f), refreshAll);
         };
-        refreshCurrency();
 
-        // Items List
-        GameObject listCont = new GameObject("UpgradeList");
-        listCont.transform.SetParent(panel.transform, false);
-        RectTransform lrt = listCont.AddComponent<RectTransform>();
-        lrt.anchorMin = new Vector2(0.05f, 0.18f); lrt.anchorMax = new Vector2(0.95f, 0.76f);
-        lrt.sizeDelta = Vector2.zero; lrt.anchoredPosition = Vector2.zero;
-        VerticalLayoutGroup vlg = listCont.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 10; vlg.childControlHeight = true; vlg.childControlWidth = true;
-        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        System.Action rebuildUpgrades = () => {
+            foreach (Transform child in upgCont.transform) Object.Destroy(child.gameObject);
+            CreateHangarRow(upgCont.transform, MetaProgression.UP_HULL, "Blindagem de Titânio", "+15 HP Máximo inicial por nível", 5, 12, refreshAll);
+            CreateHangarRow(upgCont.transform, MetaProgression.UP_SPEED, "Propulsores Iônicos", "+5% Velocidade de movimento por nível", 5, 12, refreshAll);
+            CreateHangarRow(upgCont.transform, MetaProgression.UP_DAMAGE, "Condensador de Plasma", "+10% Dano global por nível", 5, 16, refreshAll);
+            CreateHangarRow(upgCont.transform, MetaProgression.UP_MAGNET, "Coletor Gravitacional", "+2m Raio do ímã de gemas por nível", 5, 10, refreshAll);
+            CreateHangarRow(upgCont.transform, MetaProgression.UP_REROLL, "Módulo de Re-roll", "+1 Troca de opções por partida", 2, 25, refreshAll);
+        };
 
-        CreateHangarRow(listCont.transform, MetaProgression.UP_HULL, "Blindagem de Titânio", "+15 HP Máximo inicial por nível", 5, 12, refreshCurrency);
-        CreateHangarRow(listCont.transform, MetaProgression.UP_SPEED, "Propulsores Iônicos", "+5% Velocidade de movimento por nível", 5, 12, refreshCurrency);
-        CreateHangarRow(listCont.transform, MetaProgression.UP_DAMAGE, "Condensador de Plasma", "+10% Dano global por nível", 5, 16, refreshCurrency);
-        CreateHangarRow(listCont.transform, MetaProgression.UP_MAGNET, "Coletor Gravitacional", "+2m Raio do ímã de gemas por nível", 5, 10, refreshCurrency);
-        CreateHangarRow(listCont.transform, MetaProgression.UP_REROLL, "Módulo de Re-roll", "+1 Troca de opções por partida", 2, 25, refreshCurrency);
+        refreshAll = () => {
+            cText.text = $"<color=#00ffcc>★ Células Estelares Disponíveis: {MetaProgression.GetStarCores()}</color>";
+            rebuildShips();
+            rebuildUpgrades();
+        };
+
+        // Tab state switching
+        bool showShips = true;
+        GameObject tab1 = CreateStyledButton(tabsObj.transform, "🚀 NAVES & CHASSIS", new Color(0f, 0.8f, 1f), Color.black, null);
+        GameObject tab2 = CreateStyledButton(tabsObj.transform, "⚡ MELHORIAS DA FROTA", new Color(0.15f, 0.2f, 0.3f), Color.white, null);
+
+        System.Action updateTabs = () => {
+            shipsCont.SetActive(showShips);
+            upgCont.SetActive(!showShips);
+            tab1.GetComponent<Image>().color = showShips ? new Color(0f, 0.8f, 1f) : new Color(0.15f, 0.2f, 0.3f);
+            tab1.GetComponentInChildren<Text>().color = showShips ? Color.black : Color.white;
+            tab2.GetComponent<Image>().color = !showShips ? new Color(0f, 0.8f, 1f) : new Color(0.15f, 0.2f, 0.3f);
+            tab2.GetComponentInChildren<Text>().color = !showShips ? Color.black : Color.white;
+        };
+
+        tab1.GetComponent<Button>().onClick.AddListener(() => {
+            showShips = true;
+            GameAudio.Play(AudioCue.Upgrade);
+            updateTabs();
+        });
+
+        tab2.GetComponent<Button>().onClick.AddListener(() => {
+            showShips = false;
+            GameAudio.Play(AudioCue.Upgrade);
+            updateTabs();
+        });
+
+        refreshAll();
+        updateTabs();
 
         // Close Button
         GameObject closeBtn = CreateStyledButton(panel.transform, "VOLTAR / FECHAR", new Color(0.8f, 0.2f, 0.3f), Color.white, () => {
             Object.Destroy(panel);
         });
         RectTransform cbrt = closeBtn.GetComponent<RectTransform>();
-        cbrt.anchorMin = new Vector2(0.35f, 0.04f); cbrt.anchorMax = new Vector2(0.65f, 0.12f);
+        cbrt.anchorMin = new Vector2(0.35f, 0.03f); cbrt.anchorMax = new Vector2(0.65f, 0.09f);
         cbrt.sizeDelta = Vector2.zero; cbrt.anchoredPosition = Vector2.zero;
+    }
+
+    static void CreateShipRow(Transform parent, MetaProgression.ShipChassis chassis, string name, string subtitle, string desc, Color themeColor, System.Action refreshAll)
+    {
+        GameObject row = new GameObject("ShipRow_" + chassis);
+        row.transform.SetParent(parent, false);
+        LayoutElement le = row.AddComponent<LayoutElement>();
+        le.minHeight = 56; le.preferredHeight = 60;
+        Image bg = row.AddComponent<Image>();
+        bg.color = new Color(0.07f, 0.09f, 0.15f, 0.95f);
+
+        // Accent colored stripe on the left
+        GameObject stripe = new GameObject("AccentStripe");
+        stripe.transform.SetParent(row.transform, false);
+        RectTransform srt = stripe.AddComponent<RectTransform>();
+        srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(0.012f, 1f);
+        srt.sizeDelta = Vector2.zero; srt.anchoredPosition = Vector2.zero;
+        Image sImg = stripe.AddComponent<Image>();
+        sImg.color = themeColor;
+
+        // Info text container
+        GameObject info = new GameObject("Info");
+        info.transform.SetParent(row.transform, false);
+        RectTransform irt = info.AddComponent<RectTransform>();
+        irt.anchorMin = new Vector2(0.025f, 0f); irt.anchorMax = new Vector2(0.68f, 1f);
+        irt.sizeDelta = Vector2.zero; irt.anchoredPosition = Vector2.zero;
+        Text iText = info.AddComponent<Text>();
+        iText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        iText.alignment = TextAnchor.MiddleLeft;
+
+        // Action button container
+        GameObject btnObj = new GameObject("ActionBtn");
+        btnObj.transform.SetParent(row.transform, false);
+        RectTransform brt = btnObj.AddComponent<RectTransform>();
+        brt.anchorMin = new Vector2(0.70f, 0.12f); brt.anchorMax = new Vector2(0.98f, 0.88f);
+        brt.sizeDelta = Vector2.zero; brt.anchoredPosition = Vector2.zero;
+        Image bImg = btnObj.AddComponent<Image>();
+        Button btn = btnObj.AddComponent<Button>();
+
+        GameObject bTxtObj = new GameObject("Text");
+        bTxtObj.transform.SetParent(btnObj.transform, false);
+        Text bText = bTxtObj.AddComponent<Text>();
+        bText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        bText.fontSize = 16; bText.fontStyle = FontStyle.Bold; bText.alignment = TextAnchor.MiddleCenter;
+        RectTransform btr = bTxtObj.GetComponent<RectTransform>();
+        btr.anchorMin = Vector2.zero; btr.anchorMax = Vector2.one; btr.sizeDelta = Vector2.zero;
+
+        bool isUnlocked = MetaProgression.IsShipUnlocked(chassis);
+        bool isSelected = MetaProgression.GetSelectedShip() == chassis;
+        int cost = MetaProgression.GetShipCost(chassis);
+        int cores = MetaProgression.GetStarCores();
+
+        string hexColor = ColorUtility.ToHtmlStringRGB(themeColor);
+        iText.text = $"<size=17><b><color=#{hexColor}>{name}</color></b></size> <size=12><color=#88bbdd>[{subtitle}]</color></size>\n<size=12><color=#cccccc>{desc}</color></size>";
+
+        if (isSelected)
+        {
+            bText.text = "EQUIPADO ★";
+            bText.color = Color.black;
+            bImg.color = new Color(0.1f, 0.9f, 0.45f);
+            btn.interactable = false;
+        }
+        else if (isUnlocked)
+        {
+            bText.text = "EQUIPAR";
+            bText.color = Color.black;
+            bImg.color = new Color(0f, 0.8f, 1f);
+            btn.interactable = true;
+            btn.onClick.AddListener(() => {
+                MetaProgression.SetSelectedShip(chassis);
+                GameAudio.Play(AudioCue.Upgrade);
+                if (GameManager.Instance != null && GameManager.Instance.player != null)
+                {
+                    MetaProgression.ApplyShipChassis(chassis, GameManager.Instance,
+                        GameManager.Instance.player.GetComponent<PlayerMovement>(),
+                        GameManager.Instance.player.GetComponent<Weapon>());
+                }
+                if (refreshAll != null) refreshAll();
+            });
+        }
+        else
+        {
+            bText.text = $"DESBLOQUEAR ({cost} ★)";
+            bool canAfford = cores >= cost;
+            bText.color = canAfford ? Color.black : Color.white;
+            bImg.color = canAfford ? new Color(1f, 0.75f, 0.1f) : new Color(0.35f, 0.2f, 0.2f);
+            btn.interactable = canAfford;
+            btn.onClick.AddListener(() => {
+                if (MetaProgression.TryUnlockShip(chassis))
+                {
+                    GameAudio.Play(AudioCue.LevelUp);
+                    if (GameManager.Instance != null && GameManager.Instance.player != null)
+                    {
+                        MetaProgression.ApplyShipChassis(chassis, GameManager.Instance,
+                            GameManager.Instance.player.GetComponent<PlayerMovement>(),
+                            GameManager.Instance.player.GetComponent<Weapon>());
+                    }
+                    if (refreshAll != null) refreshAll();
+                }
+            });
+        }
     }
 
     static void CreateHangarRow(Transform parent, string key, string title, string desc, int maxLvl, int baseCost, System.Action onPurchased)
@@ -325,7 +509,7 @@ public static class RuntimeUIBuilder
         GameObject row = new GameObject("Row_" + key);
         row.transform.SetParent(parent, false);
         LayoutElement le = row.AddComponent<LayoutElement>();
-        le.minHeight = 50; le.preferredHeight = 52;
+        le.minHeight = 48; le.preferredHeight = 50;
         Image bg = row.AddComponent<Image>();
         bg.color = new Color(0.08f, 0.1f, 0.16f, 0.9f);
 
@@ -336,7 +520,7 @@ public static class RuntimeUIBuilder
         irt.sizeDelta = Vector2.zero; irt.anchoredPosition = Vector2.zero;
         Text iText = info.AddComponent<Text>();
         iText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        iText.fontSize = 17; iText.alignment = TextAnchor.MiddleLeft;
+        iText.fontSize = 16; iText.alignment = TextAnchor.MiddleLeft;
 
         GameObject btnObj = new GameObject("BuyBtn");
         btnObj.transform.SetParent(row.transform, false);
@@ -349,13 +533,13 @@ public static class RuntimeUIBuilder
         bTxtObj.transform.SetParent(btnObj.transform, false);
         Text bText = bTxtObj.AddComponent<Text>();
         bText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        bText.fontSize = 17; bText.alignment = TextAnchor.MiddleCenter;
+        bText.fontSize = 16; bText.alignment = TextAnchor.MiddleCenter;
         RectTransform btr = bTxtObj.GetComponent<RectTransform>();
         btr.anchorMin = Vector2.zero; btr.anchorMax = Vector2.one; btr.sizeDelta = Vector2.zero;
 
         System.Action updateDisplay = () => {
             int currentLvl = MetaProgression.GetUpgradeLevel(key);
-            iText.text = $"<b>{title}</b> [NV {currentLvl}/{maxLvl}]\n<size=13><color=#aaaaaa>{desc}</color></size>";
+            iText.text = $"<b>{title}</b> [NV {currentLvl}/{maxLvl}]\n<size=12><color=#aaaaaa>{desc}</color></size>";
 
             if (currentLvl >= maxLvl)
             {
