@@ -287,7 +287,7 @@ public class PlanetaryBiome : MonoBehaviour
 
     void SpawnIonicLightningStrike()
     {
-        Vector3 pos = GetSurfacePointNearPlayer(3f, 14f);
+        Vector3 pos = GetSurfacePointNearPlayer(8f, 18f);
         Vector3 upNormal = (pos - transform.position).normalized;
 
         GameObject strikeObj = new GameObject("IonicLightningStrike");
@@ -477,7 +477,6 @@ public class ToxicSporeLogic : MonoBehaviour
     {
         if (detonated) return;
         if (other.GetComponentInParent<Bullet>() != null ||
-            other.GetComponentInParent<PlayerMovement>() != null ||
             other.GetComponentInParent<Enemy>() != null)
         {
             Detonate();

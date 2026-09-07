@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class Teleporter : MonoBehaviour
 {
@@ -6,17 +7,19 @@ public class Teleporter : MonoBehaviour
     public float cooldown = 0f;
     public bool isLocked = false;
 
-    public const float COUNTDOWN_DURATION = 3.0f;
-    private float currentCountdown = COUNTDOWN_DURATION;
+    // Progression ring (0 to 1 over 3 seconds)
+    public const float FILL_DURATION = 3.0f;
+    public const float REGRESS_DURATION = 2.0f;
+    [Range(0f, 1f)] public float fillProgress = 0f;
     private bool isPlayerInside = false;
-    private int lastBeepSecond = -1;
 
     private GameObject visualsRoot;
     private GameObject lockBarrier;
     private Material barrierMaterial;
-    private TextMesh labelMesh;
     private Transform ringsTransform;
-    private Material beaconMaterial;
+    private LineRenderer progressRing;
+    private LineRenderer trackRing;
+    private Material progressMaterial;
 
     void Awake()
     {
@@ -30,7 +33,6 @@ public class Teleporter : MonoBehaviour
         {
             AutoResolveTargetPlanet();
         }
-        UpdateLabelText();
     }
 
     void AutoResolveTargetPlanet()
@@ -44,17 +46,6 @@ public class Teleporter : MonoBehaviour
                 break;
             }
         }
-    }
-
-    public string GetDestinationName()
-    {
-        if (targetPlanet != null)
-        {
-            PlanetaryBiome pb = targetPlanet.GetComponent<PlanetaryBiome>();
-            if (pb != null && !string.IsNullOrEmpty(pb.planetName)) return pb.planetName;
-            return targetPlanet.gameObject.name;
-        }
-        return "HIPERESPAÇO";
     }
 
     void EnsureVisuals()
@@ -71,110 +62,102 @@ public class Teleporter : MonoBehaviour
         Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
         if (unlitShader == null) unlitShader = Shader.Find("Unlit/Color");
 
-        // 1. Ground Platform Base (Glowing Disc)
+        // 1. Ground Platform Base Disc
         GameObject baseDisc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         baseDisc.name = "PlatformBase";
         baseDisc.transform.SetParent(visualsRoot.transform, false);
-        baseDisc.transform.localPosition = new Vector3(0, 0.05f, 0);
-        baseDisc.transform.localScale = new Vector3(5.5f, 0.1f, 5.5f);
+        baseDisc.transform.localPosition = new Vector3(0, 0.04f, 0);
+        baseDisc.transform.localScale = new Vector3(5.6f, 0.08f, 5.6f);
         Destroy(baseDisc.GetComponent<Collider>());
 
         MeshRenderer mr = baseDisc.GetComponent<MeshRenderer>();
         Material baseMat = new Material(unlitShader);
-        Color baseCol = new Color(0.05f, 0.25f, 0.35f, 0.9f);
+        Color baseCol = new Color(0.04f, 0.08f, 0.14f, 0.95f);
         baseMat.SetColor("_BaseColor", baseCol);
         baseMat.EnableKeyword("_EMISSION");
-        baseMat.SetColor("_EmissionColor", new Color(0f, 0.8f, 0.9f) * 1.5f);
+        baseMat.SetColor("_EmissionColor", new Color(0f, 0.4f, 0.6f) * 1.2f);
         mr.material = baseMat;
 
-        // Ground Glowing Ring
-        GameObject groundRingObj = new GameObject("GroundRing");
-        groundRingObj.transform.SetParent(visualsRoot.transform, false);
-        groundRingObj.transform.localPosition = new Vector3(0, 0.12f, 0);
-        LineRenderer gRing = groundRingObj.AddComponent<LineRenderer>();
-        gRing.useWorldSpace = false;
-        gRing.loop = true;
-        gRing.positionCount = 36;
-        gRing.widthMultiplier = 0.16f;
-        Material ringMat = new Material(unlitShader);
-        ringMat.SetColor("_BaseColor", new Color(0f, 1f, 0.9f));
-        gRing.sharedMaterial = ringMat;
-        for (int i = 0; i < 36; i++)
+        // 2. Static Background Track Ring (faint guide ring)
+        GameObject trackObj = new GameObject("TrackRing");
+        trackObj.transform.SetParent(visualsRoot.transform, false);
+        trackObj.transform.localPosition = new Vector3(0, 0.1f, 0);
+        trackRing = trackObj.AddComponent<LineRenderer>();
+        trackRing.useWorldSpace = false;
+        trackRing.loop = true;
+        trackRing.positionCount = 48;
+        trackRing.widthMultiplier = 0.14f;
+        Material trackMat = new Material(unlitShader);
+        trackMat.SetColor("_BaseColor", new Color(0f, 0.35f, 0.45f, 0.4f));
+        trackMat.EnableKeyword("_EMISSION");
+        trackMat.SetColor("_EmissionColor", new Color(0f, 0.25f, 0.35f) * 0.8f);
+        trackRing.sharedMaterial = trackMat;
+        for (int i = 0; i < 48; i++)
         {
-            float ang = i * Mathf.PI * 2f / 36f;
-            gRing.SetPosition(i, new Vector3(Mathf.Cos(ang) * 2.7f, 0, Mathf.Sin(ang) * 2.7f));
+            float ang = i * Mathf.PI * 2f / 48f;
+            trackRing.SetPosition(i, new Vector3(Mathf.Sin(ang) * 2.5f, 0, Mathf.Cos(ang) * 2.5f));
         }
 
-        // 2. Tall Sky Beacon Light Pillar (Visible across the entire planet!)
-        GameObject beaconObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        beaconObj.name = "SkyBeacon";
-        beaconObj.transform.SetParent(visualsRoot.transform, false);
-        beaconObj.transform.localPosition = new Vector3(0, 20f, 0);
-        beaconObj.transform.localScale = new Vector3(2.0f, 20f, 2.0f);
-        Destroy(beaconObj.GetComponent<Collider>());
+        // 3. Dynamic Progress Ring (fills up / regresses around the base)
+        GameObject progressObj = new GameObject("ProgressRing");
+        progressObj.transform.SetParent(visualsRoot.transform, false);
+        progressObj.transform.localPosition = new Vector3(0, 0.14f, 0);
+        progressRing = progressObj.AddComponent<LineRenderer>();
+        progressRing.useWorldSpace = false;
+        progressRing.loop = false;
+        progressRing.widthMultiplier = 0.24f;
+        progressMaterial = new Material(unlitShader);
+        progressMaterial.SetColor("_BaseColor", new Color(0f, 1f, 0.95f, 1f));
+        progressMaterial.EnableKeyword("_EMISSION");
+        progressMaterial.SetColor("_EmissionColor", new Color(0f, 1.8f, 1.6f) * 2.5f);
+        progressRing.sharedMaterial = progressMaterial;
+        progressRing.positionCount = 0;
 
-        MeshRenderer bmr = beaconObj.GetComponent<MeshRenderer>();
-        beaconMaterial = new Material(unlitShader);
-        Color beaconCol = new Color(0f, 1f, 0.95f, 0.45f);
-        beaconMaterial.SetColor("_BaseColor", beaconCol);
-        beaconMaterial.EnableKeyword("_EMISSION");
-        beaconMaterial.SetColor("_EmissionColor", new Color(0f, 1f, 0.95f) * 4f);
-        bmr.material = beaconMaterial;
-
-        // 3. Floating Rotating Stargate Rings
+        // 4. Low-profile Spinning Stargate Rings (close to base, no tall pillar)
         GameObject ringsRoot = new GameObject("SpinningRings");
         ringsRoot.transform.SetParent(visualsRoot.transform, false);
-        ringsRoot.transform.localPosition = new Vector3(0, 1.8f, 0);
+        ringsRoot.transform.localPosition = new Vector3(0, 0.6f, 0);
         ringsTransform = ringsRoot.transform;
 
-        // Ring 1 (Horizontal tilt)
+        Material ringMat = new Material(unlitShader);
+        ringMat.SetColor("_BaseColor", new Color(0f, 1f, 0.9f));
+        ringMat.EnableKeyword("_EMISSION");
+        ringMat.SetColor("_EmissionColor", new Color(0f, 1.2f, 1.1f) * 2f);
+
         GameObject r1 = new GameObject("Ring1");
         r1.transform.SetParent(ringsRoot.transform, false);
         LineRenderer lr1 = r1.AddComponent<LineRenderer>();
         lr1.useWorldSpace = false;
         lr1.loop = true;
         lr1.positionCount = 32;
-        lr1.widthMultiplier = 0.12f;
+        lr1.widthMultiplier = 0.10f;
         lr1.sharedMaterial = ringMat;
         for (int i = 0; i < 32; i++)
         {
             float a = i * Mathf.PI * 2f / 32f;
-            lr1.SetPosition(i, new Vector3(Mathf.Cos(a) * 2.5f, Mathf.Sin(a) * 0.4f, Mathf.Sin(a) * 2.5f));
+            lr1.SetPosition(i, new Vector3(Mathf.Cos(a) * 2.4f, Mathf.Sin(a) * 0.25f, Mathf.Sin(a) * 2.4f));
         }
 
-        // Ring 2 (Vertical tilt)
         GameObject r2 = new GameObject("Ring2");
         r2.transform.SetParent(ringsRoot.transform, false);
-        r2.transform.localRotation = Quaternion.Euler(60f, 45f, 0);
+        r2.transform.localRotation = Quaternion.Euler(30f, 60f, 0);
         LineRenderer lr2 = r2.AddComponent<LineRenderer>();
         lr2.useWorldSpace = false;
         lr2.loop = true;
         lr2.positionCount = 32;
-        lr2.widthMultiplier = 0.12f;
+        lr2.widthMultiplier = 0.10f;
         lr2.sharedMaterial = ringMat;
         for (int i = 0; i < 32; i++)
         {
             float a = i * Mathf.PI * 2f / 32f;
-            lr2.SetPosition(i, new Vector3(Mathf.Cos(a) * 2.4f, Mathf.Sin(a) * 2.4f, 0));
+            lr2.SetPosition(i, new Vector3(Mathf.Cos(a) * 2.3f, Mathf.Sin(a) * 0.25f, Mathf.Sin(a) * 2.3f));
         }
 
-        // 4. 3D Floating Holographic Label
-        GameObject labelObj = new GameObject("HoloLabel");
-        labelObj.transform.SetParent(visualsRoot.transform, false);
-        labelObj.transform.localPosition = new Vector3(0, 4.5f, 0);
-        labelMesh = labelObj.AddComponent<TextMesh>();
-        labelMesh.fontSize = 28;
-        labelMesh.characterSize = 0.14f;
-        labelMesh.alignment = TextAlignment.Center;
-        labelMesh.anchor = TextAnchor.MiddleCenter;
-        labelMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        labelMesh.color = Color.cyan;
-
-        // Ensure collider is a wide trigger
+        // Wide trigger collider
         SphereCollider sc = GetComponent<SphereCollider>();
         if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
         sc.isTrigger = true;
-        sc.radius = 4.0f;
+        sc.radius = 3.5f;
     }
 
     void Update()
@@ -182,7 +165,6 @@ public class Teleporter : MonoBehaviour
         if (cooldown > 0f)
         {
             cooldown -= Time.deltaTime;
-            if (cooldown <= 0f) ResetCountdown();
         }
 
         if (visualsRoot != null)
@@ -190,123 +172,107 @@ public class Teleporter : MonoBehaviour
             BossWorldMotion.SetWorldScale(visualsRoot.transform, Vector3.one);
         }
 
-        // Rotate stargate rings
-        float rotSpeed = isPlayerInside ? 280f : (isLocked ? 180f : 60f);
+        // Smooth rotation of decorative rings
+        float rotSpeed = isPlayerInside ? (60f + fillProgress * 240f) : (isLocked ? 120f : 40f);
         if (ringsTransform != null)
         {
-            ringsTransform.Rotate(0, rotSpeed * Time.deltaTime, rotSpeed * 0.4f * Time.deltaTime);
+            ringsTransform.Rotate(0, rotSpeed * Time.deltaTime, rotSpeed * 0.3f * Time.deltaTime);
         }
 
-        // Pulse sky beacon
-        if (beaconMaterial != null)
-        {
-            float pulse = Mathf.PingPong(Time.time * (isPlayerInside ? 8f : 2f), 1f);
-            Color bCol = isLocked ? Color.red : (isPlayerInside ? Color.yellow : new Color(0f, 1f, 0.95f));
-            beaconMaterial.SetColor("_EmissionColor", bCol * (2.5f + pulse * 4f));
-        }
+        // Check if player is inside the portal area
+        CheckPlayerInside();
 
-        // Face 3D label to camera
-        if (labelMesh != null && Camera.main != null)
-        {
-            labelMesh.transform.rotation = Quaternion.LookRotation(labelMesh.transform.position - Camera.main.transform.position);
-        }
+        // Update filling vs regressing
+        UpdateFillProgress();
 
-        // Locked Leviathan barrier visual
-        if (isLocked && lockBarrier != null)
-        {
-            BossWorldMotion.SetWorldScale(lockBarrier.transform, Vector3.one);
-            float pulse = Mathf.PingPong(Time.time * 4f, 1f);
-            MeshRenderer bmr = lockBarrier.GetComponent<MeshRenderer>();
-            if (bmr != null && bmr.material != null)
-            {
-                bmr.material.SetColor("_EmissionColor", Color.red * (3f + pulse * 4f));
-            }
-        }
-
-        // Check distance to player for 3-second countdown
-        CheckPlayerProximity();
+        // Update the circular progress ring line
+        UpdateProgressRingMesh();
     }
 
-    void CheckPlayerProximity()
+    void CheckPlayerInside()
     {
-        if (isLocked)
+        if (isLocked || cooldown > 0f)
         {
-            if (labelMesh != null)
-                labelMesh.text = "<color=#ff2244><b>⛔ PORTAL BLOQUEADO ⛔</b></color>\n<size=18>DERROTE O LEVIATÃ PRIMEIRO</size>";
-            return;
-        }
-
-        if (cooldown > 0f)
-        {
-            if (labelMesh != null)
-                labelMesh.text = $"<color=#888888>RECARREGANDO... ({cooldown:0.0}s)</color>";
+            isPlayerInside = false;
             return;
         }
 
         Transform player = GameManager.Instance != null ? GameManager.Instance.player : null;
-        if (player == null) return;
+        if (player == null)
+        {
+            isPlayerInside = false;
+            return;
+        }
 
         float dist = Vector3.Distance(transform.position, player.position);
+        isPlayerInside = (dist <= 3.2f);
+    }
 
-        if (dist <= 4.0f)
+    void UpdateFillProgress()
+    {
+        if (isPlayerInside)
         {
-            if (!isPlayerInside)
+            // Fills up over FILL_DURATION (3 seconds)
+            fillProgress = Mathf.MoveTowards(fillProgress, 1f, Time.deltaTime / FILL_DURATION);
+
+            // Color shifts from bright cyan to warm electric gold as it nears completion
+            if (progressMaterial != null)
             {
-                isPlayerInside = true;
-                currentCountdown = COUNTDOWN_DURATION;
-                lastBeepSecond = -1;
-                GameAudio.Play(AudioCue.Upgrade);
+                Color activeColor = Color.Lerp(new Color(0f, 1f, 0.95f), new Color(1f, 0.9f, 0.2f), fillProgress);
+                progressMaterial.SetColor("_BaseColor", activeColor);
+                progressMaterial.SetColor("_EmissionColor", activeColor * (2f + fillProgress * 3f));
             }
 
-            currentCountdown -= Time.deltaTime;
-            if (currentCountdown < 0f) currentCountdown = 0f;
-
-            int secRemaining = Mathf.CeilToInt(currentCountdown);
-            if (secRemaining != lastBeepSecond && secRemaining > 0)
+            // Once fully filled, trigger the jump!
+            if (fillProgress >= 1f)
             {
-                lastBeepSecond = secRemaining;
-                GameAudio.Play(AudioCue.Shot);
-                SpawnWarningText($"SALTO EM {secRemaining}s...");
-            }
-
-            if (CameraShake.Instance != null && currentCountdown <= 1.0f)
-            {
-                CameraShake.Instance.TriggerShake(0.04f, 0.08f);
-            }
-
-            if (labelMesh != null)
-            {
-                string colorHex = currentCountdown <= 1.0f ? "#ff3300" : (currentCountdown <= 2.0f ? "#ffcc00" : "#00ffff");
-                labelMesh.text = $"<color={colorHex}><b>⚡ INICIANDO SALTO HIPERESPACIAL ⚡</b></color>\nDESTINO: <b>{GetDestinationName()}</b>\n<size=38><color={colorHex}><b>{currentCountdown:0.0}s</b></color></size>";
-            }
-
-            if (currentCountdown <= 0f)
-            {
-                ExecuteTeleport(player);
+                Transform player = GameManager.Instance != null ? GameManager.Instance.player : null;
+                if (player != null)
+                {
+                    ExecuteTeleport(player);
+                }
             }
         }
         else
         {
-            if (isPlayerInside)
+            // Regresses smoothly down when player exits
+            if (fillProgress > 0f)
             {
-                ResetCountdown();
+                fillProgress = Mathf.MoveTowards(fillProgress, 0f, Time.deltaTime / REGRESS_DURATION);
+
+                if (progressMaterial != null)
+                {
+                    Color activeColor = Color.Lerp(new Color(0f, 1f, 0.95f), new Color(1f, 0.9f, 0.2f), fillProgress);
+                    progressMaterial.SetColor("_BaseColor", activeColor);
+                    progressMaterial.SetColor("_EmissionColor", activeColor * 2f);
+                }
             }
-            UpdateLabelText();
         }
     }
 
-    void UpdateLabelText()
+    void UpdateProgressRingMesh()
     {
-        if (labelMesh == null) return;
-        labelMesh.text = $"<color=#00ffcc><b>🌀 PORTAL DE HIPERESPAÇO 🌀</b></color>\nDESTINO: <color=#ffffff><b>{GetDestinationName()}</b></color>\n<size=18><color=#aaaaaa>Fique 3 segundos na base para saltar</color></size>";
-    }
+        if (progressRing == null) return;
 
-    public void ResetCountdown()
-    {
-        isPlayerInside = false;
-        currentCountdown = COUNTDOWN_DURATION;
-        lastBeepSecond = -1;
-        UpdateLabelText();
+        if (fillProgress <= 0.005f)
+        {
+            progressRing.positionCount = 0;
+            return;
+        }
+
+        int maxSegments = 48;
+        int activeSegments = Mathf.Clamp(Mathf.CeilToInt(fillProgress * maxSegments), 2, maxSegments);
+        progressRing.positionCount = activeSegments + 1;
+
+        float radius = 2.5f;
+        for (int i = 0; i <= activeSegments; i++)
+        {
+            float t = (float)i / maxSegments;
+            if (t > fillProgress) t = fillProgress;
+            float angle = t * Mathf.PI * 2f;
+            Vector3 pos = new Vector3(Mathf.Sin(angle) * radius, 0.14f, Mathf.Cos(angle) * radius);
+            progressRing.SetPosition(i, pos);
+        }
     }
 
     void ExecuteTeleport(Transform player)
@@ -320,8 +286,10 @@ public class Teleporter : MonoBehaviour
         GravityBody body = player.GetComponent<GravityBody>();
         if (body == null) return;
 
-        ResetCountdown();
+        fillProgress = 0f;
+        isPlayerInside = false;
         cooldown = 4.0f;
+        if (progressRing != null) progressRing.positionCount = 0;
 
         // Position player on destination planet surface cleanly
         float targetRadius = Mathf.Abs(targetPlanet.transform.lossyScale.x) * 0.5f;
@@ -331,7 +299,14 @@ public class Teleporter : MonoBehaviour
         body.SnapToSurface();
 
         GameAudio.Play(AudioCue.Teleport);
-        if (CameraShake.Instance != null) CameraShake.Instance.TriggerShake(0.35f, 0.6f);
+        if (CameraShake.Instance != null) CameraShake.Instance.TriggerShake(0.3f, 0.5f);
+
+        // Grant 3.0 seconds of invincibility grace period so player takes NO damage when arriving
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.isInvincible = true;
+            GameManager.Instance.StartCoroutine(ArrivalInvincibility(3.0f));
+        }
 
         EnemySpawner spawner = FindAnyObjectByType<EnemySpawner>();
         if (spawner != null) spawner.currentPlanet = targetPlanet;
@@ -340,7 +315,9 @@ public class Teleporter : MonoBehaviour
         foreach (var tp in allTps)
         {
             tp.cooldown = 4.0f;
-            tp.ResetCountdown();
+            tp.fillProgress = 0f;
+            tp.isPlayerInside = false;
+            if (tp.progressRing != null) tp.progressRing.positionCount = 0;
         }
 
         PlanetaryBiome.OnPlayerArrived(targetPlanet);
@@ -348,10 +325,22 @@ public class Teleporter : MonoBehaviour
         Debug.Log("Teleportado com sucesso para " + targetPlanet.name);
     }
 
+    IEnumerator ArrivalInvincibility(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.isInvincible = false;
+        }
+    }
+
     public void Lock()
     {
         isLocked = true;
-        ResetCountdown();
+        fillProgress = 0f;
+        isPlayerInside = false;
+        if (progressRing != null) progressRing.positionCount = 0;
+
         if (lockBarrier == null)
         {
             lockBarrier = new GameObject("LockBarrier");
@@ -361,14 +350,14 @@ public class Teleporter : MonoBehaviour
             ring.useWorldSpace = false;
             ring.loop = true;
             ring.positionCount = 32;
-            ring.widthMultiplier = 0.08f;
+            ring.widthMultiplier = 0.1f;
             barrierMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
             barrierMaterial.SetColor("_BaseColor", new Color(1f, 0.2f, 0.3f));
             ring.sharedMaterial = barrierMaterial;
             for (int i = 0; i < 32; i++)
             {
                 float angle = i * Mathf.PI / 16f;
-                ring.SetPosition(i, new Vector3(Mathf.Cos(angle), 1.5f, Mathf.Sin(angle)) * 2.8f);
+                ring.SetPosition(i, new Vector3(Mathf.Cos(angle), 0.3f, Mathf.Sin(angle)) * 2.8f);
             }
         }
         else
@@ -380,7 +369,6 @@ public class Teleporter : MonoBehaviour
     public void Unlock()
     {
         isLocked = false;
-        ResetCountdown();
         if (lockBarrier != null)
         {
             Destroy(lockBarrier);
@@ -388,19 +376,12 @@ public class Teleporter : MonoBehaviour
             if (barrierMaterial != null) Destroy(barrierMaterial);
             barrierMaterial = null;
         }
-
-        GameObject fxPrefab = Resources.Load<GameObject>("TeleportFX");
-        if (fxPrefab != null)
-        {
-            GameObject fx = Instantiate(fxPrefab, transform.position, Quaternion.identity);
-            Destroy(fx, 2f);
-        }
     }
 
     void OnDestroy()
     {
         if (barrierMaterial != null) Destroy(barrierMaterial);
-        if (beaconMaterial != null) Destroy(beaconMaterial);
+        if (progressMaterial != null) Destroy(progressMaterial);
     }
 
     public static void LockAllTeleporters()
@@ -413,24 +394,5 @@ public class Teleporter : MonoBehaviour
     {
         Teleporter[] allTps = FindObjectsByType<Teleporter>(FindObjectsInactive.Exclude);
         foreach (var tp in allTps) tp.Unlock();
-    }
-
-    void SpawnWarningText(string msg)
-    {
-        Vector3 textPos = transform.position + transform.up * 2.5f;
-        GameObject txtObj = null;
-        if (GameManager.Instance != null && GameManager.Instance.floatingTextPrefab != null)
-        {
-            txtObj = Instantiate(GameManager.Instance.floatingTextPrefab, textPos, Quaternion.identity);
-        }
-        else
-        {
-            txtObj = new GameObject("FloatingText");
-            txtObj.transform.position = textPos;
-        }
-
-        FloatingText ft = txtObj.GetComponent<FloatingText>();
-        if (ft == null) ft = txtObj.AddComponent<FloatingText>();
-        ft.Setup(msg);
     }
 }
