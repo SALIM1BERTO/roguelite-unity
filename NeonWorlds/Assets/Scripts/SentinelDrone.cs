@@ -11,6 +11,7 @@ public class SentinelDrone : MonoBehaviour
     public float orbitSpeed = 120f; // degrees per sec
     public float fireInterval = 0.8f;
     public int laserDamage = 18;
+    public bool isTeslaChain = false;
 
     private List<GameObject> drones = new List<GameObject>();
     private float currentOrbitAngle = 0f;
@@ -37,13 +38,13 @@ public class SentinelDrone : MonoBehaviour
 
         if (level <= 0) return;
 
-        int droneCount = level >= 3 ? 2 : 1;
+        int droneCount = isTeslaChain ? 3 : (level >= 3 ? 2 : 1);
         for (int i = 0; i < droneCount; i++)
         {
             GameObject drone = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             drone.name = "SentinelDrone_" + i;
             drone.transform.SetParent(transform, false);
-            drone.transform.localScale = Vector3.one * 0.45f;
+            drone.transform.localScale = Vector3.one * (isTeslaChain ? 0.52f : 0.45f);
             Destroy(drone.GetComponent<Collider>());
 
             // Outer ring on drone
@@ -55,10 +56,10 @@ public class SentinelDrone : MonoBehaviour
 
             MeshRenderer mr = drone.GetComponent<MeshRenderer>();
             Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            Color c = new Color(0f, 0.8f, 1f); // Neon Cyan
+            Color c = isTeslaChain ? new Color(1f, 0.85f, 0.1f) : new Color(0f, 0.8f, 1f); // Golden Lightning or Neon Cyan
             mat.SetColor("_BaseColor", c);
             mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", c * 3f);
+            mat.SetColor("_EmissionColor", c * 3.5f);
             mr.material = mat;
             ring.GetComponent<MeshRenderer>().material = mat;
 
@@ -217,6 +218,11 @@ public class SentinelDrone : MonoBehaviour
             Destroy(fx, 0.5f);
         }
 
+        if (isTeslaChain)
+        {
+            StartCoroutine(TeslaChainArcs(targetPos, enemy, dmg, planet));
+        }
+
         float duration = 0.12f;
         float elapsed = 0f;
         while (elapsed < duration)
@@ -230,5 +236,85 @@ public class SentinelDrone : MonoBehaviour
 
         if (mat != null) Destroy(mat);
         if (beamObj != null) Destroy(beamObj);
+    }
+
+    IEnumerator TeslaChainArcs(Vector3 originPos, Enemy initialEnemy, int baseDamage, Transform planet)
+    {
+        Vector3 currentPos = originPos;
+        HashSet<Enemy> hitEnemies = new HashSet<Enemy>();
+        if (initialEnemy != null) hitEnemies.Add(initialEnemy);
+
+        int jumps = 3;
+        int chainDmg = Mathf.RoundToInt(baseDamage * 0.7f);
+
+        for (int j = 0; j < jumps; j++)
+        {
+            Enemy nextTarget = null;
+            float minDist = 8f;
+            Enemy[] allEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+            foreach (Enemy e in allEnemies)
+            {
+                if (e != null && !e.isDead && !hitEnemies.Contains(e))
+                {
+                    float dist = Vector3.Distance(currentPos, e.transform.position);
+                    if (dist < minDist)
+                    {
+                        minDist = dist;
+                        nextTarget = e;
+                    }
+                }
+            }
+
+            if (nextTarget == null) break;
+            hitEnemies.Add(nextTarget);
+
+            Vector3 nextPos = nextTarget.transform.position;
+
+            GameObject lightningObj = new GameObject("TeslaArc");
+            LineRenderer arcLr = lightningObj.AddComponent<LineRenderer>();
+            arcLr.useWorldSpace = true;
+            arcLr.startWidth = 0.14f;
+            arcLr.endWidth = 0.05f;
+
+            Material arcMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color arcCol = new Color(1f, 0.9f, 0.2f); // Radiant Gold-Yellow
+            arcMat.SetColor("_BaseColor", arcCol);
+            arcMat.EnableKeyword("_EMISSION");
+            arcMat.SetColor("_EmissionColor", arcCol * 4.5f);
+            arcLr.material = arcMat;
+
+            int segments = 6;
+            arcLr.positionCount = segments + 1;
+            arcLr.SetPosition(0, currentPos);
+            arcLr.SetPosition(segments, nextPos);
+
+            Vector3 step = (nextPos - currentPos) / segments;
+            Vector3 planetPos = planet != null ? planet.position : Vector3.zero;
+            Vector3 upDir = (currentPos - planetPos).normalized;
+            Vector3 perp = Vector3.Cross((nextPos - currentPos).normalized, upDir).normalized;
+
+            for (int s = 1; s < segments; s++)
+            {
+                float jitter = Random.Range(-0.35f, 0.35f);
+                Vector3 p = currentPos + step * s + perp * jitter;
+                arcLr.SetPosition(s, p);
+            }
+
+            nextTarget.TakeDamage(chainDmg, true);
+
+            GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
+            if (fxPrefab != null)
+            {
+                GameObject fx = Instantiate(fxPrefab, nextPos, Quaternion.identity);
+                if (planet != null) fx.transform.SetParent(planet, true);
+                Destroy(fx, 0.4f);
+            }
+
+            currentPos = nextPos;
+            Destroy(arcMat, 0.12f);
+            Destroy(lightningObj, 0.12f);
+
+            yield return new WaitForSeconds(0.04f);
+        }
     }
 }

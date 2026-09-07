@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,6 +10,7 @@ public class OrbitalMines : MonoBehaviour
     public float dropInterval = 3.5f;
     public int mineDamage = 35;
     public float blastRadius = 2.6f;
+    public bool isVoidVortex = false;
 
     private float timer = 0f;
 
@@ -27,7 +28,7 @@ public class OrbitalMines : MonoBehaviour
         {
             timer = Mathf.Max(1.0f, dropInterval - (level * 0.4f));
             DropMine();
-            if (level >= 3)
+            if (level >= 3 || isVoidVortex)
             {
                 StartCoroutine(DelayedDrop(0.25f));
             }
@@ -58,7 +59,7 @@ public class OrbitalMines : MonoBehaviour
         // Outer Material
         MeshRenderer mr = mine.GetComponent<MeshRenderer>();
         Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color mineColor = new Color(1f, 0f, 0.6f); // Neon Magenta
+        Color mineColor = isVoidVortex ? new Color(0.6f, 0f, 1f) : new Color(1f, 0f, 0.6f); // Radiant Purple if evolved
         mat.SetColor("_BaseColor", mineColor);
         mat.EnableKeyword("_EMISSION");
         mat.SetColor("_EmissionColor", mineColor * 3f);
@@ -79,7 +80,7 @@ public class OrbitalMines : MonoBehaviour
         coreMr.material = coreMat;
 
         VoidMineLogic logic = mine.AddComponent<VoidMineLogic>();
-        logic.Setup(mineDamage + (level * 10), blastRadius, planet);
+        logic.Setup(mineDamage + (level * 10), blastRadius, planet, isVoidVortex);
     }
 }
 
@@ -92,12 +93,14 @@ public class VoidMineLogic : MonoBehaviour
     private bool isArmed = false;
     private bool hasExploded = false;
     private float lifetime = 25f;
+    private bool isVoidVortex = false;
 
-    public void Setup(int dmg, float radius, Transform p)
+    public void Setup(int dmg, float radius, Transform p, bool vortex = false)
     {
         damage = dmg;
         blastRadius = radius;
         planet = p;
+        isVoidVortex = vortex;
     }
 
     void Update()
@@ -181,7 +184,7 @@ public class VoidMineLogic : MonoBehaviour
 
         MeshRenderer mr = ring.GetComponent<MeshRenderer>();
         Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color ringColor = new Color(1f, 0.05f, 0.65f); // Neon Magenta
+        Color ringColor = isVoidVortex ? new Color(0.6f, 0f, 1f) : new Color(1f, 0.05f, 0.65f);
         mat.SetColor("_BaseColor", ringColor);
         mat.EnableKeyword("_EMISSION");
         mat.SetColor("_EmissionColor", ringColor * 3.5f);
@@ -189,6 +192,151 @@ public class VoidMineLogic : MonoBehaviour
 
         float pScale = planet != null ? planet.lossyScale.x : 1f;
         ring.AddComponent<MineShockwaveRing>().Setup(blastRadius, pScale, mat);
+
+        if (isVoidVortex)
+        {
+            GameObject vortexObj = new GameObject("VoidVortexSingularity");
+            vortexObj.transform.position = transform.position;
+            vortexObj.transform.up = transform.up;
+            if (planet != null) vortexObj.transform.SetParent(planet, true);
+            VoidVortexSingularity vortex = vortexObj.AddComponent<VoidVortexSingularity>();
+            vortex.Setup(planet, pScale);
+        }
+
+        Destroy(gameObject);
+    }
+}
+
+public class VoidVortexSingularity : MonoBehaviour
+{
+    private Transform planet;
+    private float planetScale = 1f;
+    private float duration = 2.2f;
+    private float elapsed = 0f;
+    private float pullRadius = 7.5f;
+    private float pullForce = 8.5f;
+    private int implosionDamage = 120;
+    private GameObject visualCore;
+    private GameObject visualRing;
+
+    public void Setup(Transform p, float pScale)
+    {
+        planet = p;
+        planetScale = Mathf.Max(0.001f, pScale);
+
+        // Black hole visual core
+        visualCore = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        visualCore.name = "VortexCore";
+        visualCore.transform.SetParent(transform, false);
+        visualCore.transform.localPosition = new Vector3(0, 0.5f, 0);
+        visualCore.transform.localScale = Vector3.one * (1.2f / planetScale);
+        Destroy(visualCore.GetComponent<Collider>());
+
+        MeshRenderer mrCore = visualCore.GetComponent<MeshRenderer>();
+        Material matCore = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        matCore.SetColor("_BaseColor", new Color(0.02f, 0.0f, 0.05f));
+        matCore.EnableKeyword("_EMISSION");
+        matCore.SetColor("_EmissionColor", new Color(0.4f, 0f, 0.9f) * 2f);
+        mrCore.material = matCore;
+
+        // Rotating gravitational ring
+        visualRing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        visualRing.name = "VortexRing";
+        visualRing.transform.SetParent(transform, false);
+        visualRing.transform.localPosition = new Vector3(0, 0.2f, 0);
+        visualRing.transform.localScale = new Vector3(2.5f / planetScale, 0.03f / planetScale, 2.5f / planetScale);
+        Destroy(visualRing.GetComponent<Collider>());
+
+        MeshRenderer mrRing = visualRing.GetComponent<MeshRenderer>();
+        Material matRing = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        Color violet = new Color(0.8f, 0.1f, 1f);
+        matRing.SetColor("_BaseColor", violet);
+        matRing.EnableKeyword("_EMISSION");
+        matRing.SetColor("_EmissionColor", violet * 4f);
+        mrRing.material = matRing;
+    }
+
+    void Update()
+    {
+        elapsed += Time.deltaTime;
+        float progress = elapsed / duration;
+
+        if (visualCore != null)
+        {
+            float pulse = 1f + Mathf.PingPong(elapsed * 6f, 0.25f);
+            visualCore.transform.localScale = Vector3.one * ((1.2f * pulse) / planetScale);
+        }
+
+        if (visualRing != null)
+        {
+            visualRing.transform.Rotate(0, 360f * Time.deltaTime, 0);
+            float ringScale = Mathf.Lerp(2.8f, 1.2f, progress);
+            visualRing.transform.localScale = new Vector3(ringScale / planetScale, 0.03f / planetScale, ringScale / planetScale);
+        }
+
+        // Suction pull on nearby enemies
+        Collider[] hits = Physics.OverlapSphere(transform.position, pullRadius);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Enemy enemy = hits[i].GetComponentInParent<Enemy>();
+            if (enemy != null && !enemy.isDead)
+            {
+                Vector3 toCenter = (transform.position - enemy.transform.position).normalized;
+                enemy.transform.position += toCenter * (pullForce * Time.deltaTime);
+            }
+        }
+
+        if (progress >= 1f)
+        {
+            Implode();
+        }
+    }
+
+    void Implode()
+    {
+        GameAudio.Play(AudioCue.Explosion);
+
+        if (CameraShake.Instance != null)
+        {
+            CameraShake.Instance.TriggerShake(0.25f, 0.6f);
+        }
+
+        // Deal massive implosion damage to all caught enemies
+        Collider[] hits = Physics.OverlapSphere(transform.position, pullRadius);
+        HashSet<Enemy> hitEnemies = new HashSet<Enemy>();
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Enemy e = hits[i].GetComponentInParent<Enemy>();
+            if (e != null && !hitEnemies.Contains(e))
+            {
+                hitEnemies.Add(e);
+                e.TakeDamage(implosionDamage, true);
+            }
+
+            BossLeviathan boss = hits[i].GetComponentInParent<BossLeviathan>();
+            if (boss != null)
+            {
+                boss.TakeDamage(implosionDamage);
+            }
+        }
+
+        // Spawn sleek implosion shockwave
+        GameObject blast = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        blast.name = "VortexBlast";
+        blast.transform.position = transform.position + transform.up * 0.05f;
+        blast.transform.up = transform.up;
+        Destroy(blast.GetComponent<Collider>());
+        if (planet != null) blast.transform.SetParent(planet, true);
+
+        MeshRenderer bMr = blast.GetComponent<MeshRenderer>();
+        Material bMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        Color c = new Color(0.9f, 0.1f, 1f);
+        bMat.SetColor("_BaseColor", c);
+        bMat.EnableKeyword("_EMISSION");
+        bMat.SetColor("_EmissionColor", c * 4.5f);
+        bMr.material = bMat;
+
+        blast.AddComponent<MineShockwaveRing>().Setup(pullRadius * 0.9f, planetScale, bMat);
 
         Destroy(gameObject);
     }

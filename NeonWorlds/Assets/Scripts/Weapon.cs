@@ -28,6 +28,11 @@ public class Weapon : MonoBehaviour
     public float critChance = 0.05f; // 5% base
     public float critMultiplier = 2.5f;
 
+    [Header("Evoluções Lendárias")]
+    public bool isSupernova = false;
+    public bool isNebulaFlak = false;
+    public bool isAntimatterLance = false;
+
     // Compatibility properties
     public float fireRate { get => baseFireRate; set => baseFireRate = value; }
     public int damage { get => Mathf.RoundToInt((baseDamage + bonusDamage) * damageMultiplier); set => baseDamage = value; }
@@ -41,13 +46,23 @@ public class Weapon : MonoBehaviour
         switch(currentWeapon)
         {
             case WeaponType.Blaster:
-                baseFireRate = 2.5f; baseDamage = 10; baseSpreadCount = 1; basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
+                baseFireRate = isSupernova ? 5.5f : 2.5f;
+                baseDamage = isSupernova ? 18 : 10;
+                baseSpreadCount = isSupernova ? 2 : 1;
+                basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
             case WeaponType.Shotgun:
-                baseFireRate = 1.0f; baseDamage = 6; baseSpreadCount = 5; basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
+                baseFireRate = isNebulaFlak ? 1.4f : 1.0f;
+                baseDamage = isNebulaFlak ? 10 : 6;
+                baseSpreadCount = isNebulaFlak ? 8 : 5;
+                basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
             case WeaponType.Railgun:
-                baseFireRate = 0.5f; baseDamage = 40; baseSpreadCount = 1; basePierceCount = 100; baseBounceCount = 0; baseExplosive = false;
+                baseFireRate = isAntimatterLance ? 0.8f : 0.5f;
+                baseDamage = isAntimatterLance ? 70 : 40;
+                baseSpreadCount = 1;
+                basePierceCount = 999;
+                baseBounceCount = 0; baseExplosive = false;
                 break;
         }
     }
@@ -163,6 +178,26 @@ public class Weapon : MonoBehaviour
                 bulletScript.bounceCount = bounceCount;
                 bulletScript.explosive = explosive;
 
+                if (currentWeapon == WeaponType.Blaster && isSupernova)
+                {
+                    bulletScript.isSupernova = true;
+                    bulletScript.speed = 36f;
+                }
+                else if (currentWeapon == WeaponType.Shotgun && isNebulaFlak)
+                {
+                    bulletScript.isNebulaFlak = true;
+                    bulletScript.speed = 30f;
+                }
+                else if (currentWeapon == WeaponType.Railgun && isAntimatterLance)
+                {
+                    bulletScript.isAntimatterLance = true;
+                    bulletScript.speed = 55f;
+                }
+                else
+                {
+                    bulletScript.speed = 25f;
+                }
+
                 GravityBody gb = GetComponent<GravityBody>(); 
                 if (gb != null && gb.planet != null) {
                     bulletScript.planet = gb.planet.transform; 
@@ -172,8 +207,6 @@ public class Weapon : MonoBehaviour
 
             bulletObj.transform.position = transform.position + transform.up * 0.3f;
             bulletObj.transform.rotation = Quaternion.LookRotation(shootDir, transform.up);
-            
-            if (bulletScript != null) bulletScript.speed = 25f;
         }
         if (activeSpread > 0) GameAudio.Play(AudioCue.Shot);
     }

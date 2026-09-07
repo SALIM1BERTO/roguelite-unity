@@ -104,13 +104,14 @@ public static class RuntimeUIBuilder
                 break;
             case GameManager.UpgradeRarity.Legendary:
                 borderColor = new Color(1f, 0.85f, 0.1f);
+                bgColor = new Color(0.14f, 0.10f, 0.03f, 0.98f);
                 break;
         }
 
         if (outline != null)
         {
-            outline.effectColor = borderColor;
-            outline.effectDistance = new Vector2(2.5f, -2.5f);
+            outline.effectColor = (rarity == GameManager.UpgradeRarity.Legendary) ? new Color(1f, 0.88f, 0.2f, 1f) : borderColor;
+            outline.effectDistance = (rarity == GameManager.UpgradeRarity.Legendary) ? new Vector2(3.5f, -3.5f) : new Vector2(2.5f, -2.5f);
         }
         if (img != null) img.color = bgColor;
     }
@@ -514,11 +515,11 @@ public static class RuntimeUIBuilder
             btn.name = i.ToString(); 
         }
 
-        // Re-roll button at bottom
+        // Re-roll button at bottom left
         GameObject rerollObj = new GameObject("RerollBtn");
         rerollObj.transform.SetParent(panel.transform, false);
         RectTransform rrt = rerollObj.AddComponent<RectTransform>();
-        rrt.anchorMin = new Vector2(0.4f, 0.035f); rrt.anchorMax = new Vector2(0.6f, 0.11f);
+        rrt.anchorMin = new Vector2(0.22f, 0.035f); rrt.anchorMax = new Vector2(0.48f, 0.11f);
         rrt.sizeDelta = Vector2.zero; rrt.anchoredPosition = Vector2.zero;
         Image rrImg = rerollObj.AddComponent<Image>(); rrImg.color = new Color(0.12f, 0.16f, 0.28f, 0.95f);
         Outline rrOutline = rerollObj.AddComponent<Outline>();
@@ -530,7 +531,7 @@ public static class RuntimeUIBuilder
         Text rrTxt = rrTxtObj.AddComponent<Text>();
         rrTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         rrTxt.text = "RE-ROLL (0)";
-        rrTxt.fontSize = 18; rrTxt.fontStyle = FontStyle.Bold;
+        rrTxt.fontSize = 17; rrTxt.fontStyle = FontStyle.Bold;
         rrTxt.alignment = TextAnchor.MiddleCenter; rrTxt.color = Color.white;
         RectTransform rrtr = rrTxtObj.GetComponent<RectTransform>();
         rrtr.anchorMin = Vector2.zero; rrtr.anchorMax = Vector2.one; rrtr.sizeDelta = Vector2.zero;
@@ -542,6 +543,31 @@ public static class RuntimeUIBuilder
                 GameAudio.Play(AudioCue.Upgrade);
                 gm.ShowLevelUpScreen();
             }
+        });
+
+        // Synergy Codex button at bottom right
+        GameObject codexBtnObj = new GameObject("CodexBtn");
+        codexBtnObj.transform.SetParent(panel.transform, false);
+        RectTransform crt = codexBtnObj.AddComponent<RectTransform>();
+        crt.anchorMin = new Vector2(0.52f, 0.035f); crt.anchorMax = new Vector2(0.78f, 0.11f);
+        crt.sizeDelta = Vector2.zero; crt.anchoredPosition = Vector2.zero;
+        Image cdImg = codexBtnObj.AddComponent<Image>(); cdImg.color = new Color(0.18f, 0.14f, 0.04f, 0.95f);
+        Outline cdOutline = codexBtnObj.AddComponent<Outline>();
+        cdOutline.effectColor = new Color(1f, 0.85f, 0.2f, 0.9f);
+        Button cdBtn = codexBtnObj.AddComponent<Button>();
+
+        GameObject cdTxtObj = new GameObject("Text");
+        cdTxtObj.transform.SetParent(codexBtnObj.transform, false);
+        Text cdTxt = cdTxtObj.AddComponent<Text>();
+        cdTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        cdTxt.text = "📖 CÓDEX DE SINERGIAS";
+        cdTxt.fontSize = 17; cdTxt.fontStyle = FontStyle.Bold;
+        cdTxt.alignment = TextAnchor.MiddleCenter; cdTxt.color = new Color(1f, 0.9f, 0.2f);
+        RectTransform cdtr = cdTxtObj.GetComponent<RectTransform>();
+        cdtr.anchorMin = Vector2.zero; cdtr.anchorMax = Vector2.one; cdtr.sizeDelta = Vector2.zero;
+
+        cdBtn.onClick.AddListener(() => {
+            BuildSynergyCodexUI(canvasObj.transform);
         });
 
         gm.levelUpPanel = panel;
@@ -665,6 +691,10 @@ public static class RuntimeUIBuilder
             if (onResume != null) onResume();
         });
 
+        CreateStyledButton(btnCont.transform, "📖 CÓDEX", new Color(0.85f, 0.65f, 0.1f), Color.black, () => {
+            BuildSynergyCodexUI(canvasObj.transform);
+        });
+
         CreateStyledButton(btnCont.transform, "HANGAR", new Color(0.15f, 0.55f, 0.95f), Color.white, () => {
             BuildHangarUI(canvasObj.transform);
         });
@@ -723,5 +753,199 @@ public static class RuntimeUIBuilder
                 modeOutlines[i].effectDistance = isSelected ? new Vector2(3f, -3f) : new Vector2(1.5f, -1.5f);
             }
         }
+    }
+
+    public static GameObject BuildSynergyCodexUI(Transform canvasTransform, System.Action onClose = null)
+    {
+        if (canvasTransform == null) return null;
+
+        Transform existing = canvasTransform.Find("SynergyCodexPanel");
+        if (existing != null) Object.Destroy(existing.gameObject);
+
+        GameObject panel = new GameObject("SynergyCodexPanel");
+        panel.transform.SetParent(canvasTransform, false);
+        RectTransform panelRt = panel.AddComponent<RectTransform>();
+        panelRt.anchorMin = new Vector2(0.04f, 0.03f);
+        panelRt.anchorMax = new Vector2(0.96f, 0.97f);
+        panelRt.sizeDelta = Vector2.zero;
+        panelRt.anchoredPosition = Vector2.zero;
+
+        Image bg = panel.AddComponent<Image>();
+        bg.color = new Color(0.03f, 0.04f, 0.08f, 0.98f);
+        Outline outl = panel.AddComponent<Outline>();
+        outl.effectColor = new Color(1f, 0.85f, 0.15f, 0.9f);
+        outl.effectDistance = new Vector2(3.5f, -3.5f);
+
+        // Header Title
+        GameObject titleObj = new GameObject("Title");
+        titleObj.transform.SetParent(panel.transform, false);
+        RectTransform trt = titleObj.AddComponent<RectTransform>();
+        trt.anchorMin = new Vector2(0f, 0.88f); trt.anchorMax = new Vector2(1f, 0.98f);
+        trt.sizeDelta = Vector2.zero; trt.anchoredPosition = Vector2.zero;
+        Text tText = titleObj.AddComponent<Text>();
+        tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tText.text = "📖 CÓDEX DE SINERGIAS & EVOLUÇÕES LENDÁRIAS";
+        tText.fontSize = 28;
+        tText.fontStyle = FontStyle.Bold;
+        tText.alignment = TextAnchor.MiddleCenter;
+        tText.color = new Color(1f, 0.85f, 0.15f);
+
+        // Subtitle
+        GameObject subObj = new GameObject("Subtitle");
+        subObj.transform.SetParent(panel.transform, false);
+        RectTransform srt = subObj.AddComponent<RectTransform>();
+        srt.anchorMin = new Vector2(0f, 0.82f); srt.anchorMax = new Vector2(1f, 0.88f);
+        srt.sizeDelta = Vector2.zero; srt.anchoredPosition = Vector2.zero;
+        Text sText = subObj.AddComponent<Text>();
+        sText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        sText.text = "Maximize uma arma ou habilidade e combine com o upgrade sinérgico para forjar a Evolução Suprema!";
+        sText.fontSize = 15;
+        sText.alignment = TextAnchor.MiddleCenter;
+        sText.color = new Color(0.75f, 0.85f, 1f);
+
+        // Grid Container (2 columns x 3 rows)
+        GameObject gridObj = new GameObject("GridContainer");
+        gridObj.transform.SetParent(panel.transform, false);
+        RectTransform grt = gridObj.AddComponent<RectTransform>();
+        grt.anchorMin = new Vector2(0.04f, 0.11f);
+        grt.anchorMax = new Vector2(0.96f, 0.81f);
+        grt.sizeDelta = Vector2.zero;
+        grt.anchoredPosition = Vector2.zero;
+
+        GridLayoutGroup glg = gridObj.AddComponent<GridLayoutGroup>();
+        glg.spacing = new Vector2(25, 14);
+        glg.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        glg.constraintCount = 2;
+        glg.cellSize = new Vector2(520, 140);
+        glg.childAlignment = TextAnchor.MiddleCenter;
+
+        GameManager gm = GameManager.Instance;
+
+        // 1. Supernova Gatling
+        CreateCodexCard(gridObj.transform, gm,
+            "☀️ SUPERNOVA GATLING",
+            "Blaster (Tiro Rápido Nv 5) + Sobrecarga Crítica (Nv 1+)",
+            "Disparos dourados contínuos em cadência máxima com micro-explosões solares em área ao impactar.",
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.SupernovaGatling) >= 1,
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.FireRate) >= 5 && gm.GetUpgradeLevel(GameManager.UpgradeType.Critical) >= 1,
+            $"Tiro Rápido ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.FireRate) : 0)}/5) + Crítico ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.Critical) : 0)}/1)"
+        );
+
+        // 2. Canhão Nebular
+        CreateCodexCard(gridObj.transform, gm,
+            "🌌 CANHÃO NEBULAR (NEBULA FLAK)",
+            "Shotgun (Tiro Múltiplo Nv 4) + Ricochete Cósmico (Nv 1+)",
+            "Dispara 8 fragmentos que ricocheteiam e explodem em múltiplos estilhaços cósmicos secundários.",
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.NebulaFlak) >= 1,
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.Spread) >= 4 && gm.GetUpgradeLevel(GameManager.UpgradeType.Bounce) >= 1,
+            $"Tiro Múltiplo ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.Spread) : 0)}/4) + Ricochete ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.Bounce) : 0)}/1)"
+        );
+
+        // 3. Lança de Anti-Matéria
+        CreateCodexCard(gridObj.transform, gm,
+            "⚡ LANÇA DE ANTI-MATÉRIA",
+            "Railgun (Perfurante Nv 3) + Sobrecarga de Dano (Nv 3+)",
+            "Raio instantâneo hiper-perfurante de anti-matéria que deixa poças de radiação contínua no planeta.",
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.AntimatterLance) >= 1,
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.Pierce) >= 3 && gm.GetUpgradeLevel(GameManager.UpgradeType.Damage) >= 3,
+            $"Perfurante ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.Pierce) : 0)}/3) + Dano ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.Damage) : 0)}/3)"
+        );
+
+        // 4. Vórtice de Singularidade
+        CreateCodexCard(gridObj.transform, gm,
+            "🕳️ VÓRTICE DE SINGULARIDADE",
+            "Minas de Matéria Escura (Nv 3) + Munição Explosiva (Nv 1+)",
+            "Minas colapsam em buracos negros que sugam inimigos para o centro antes de implodir causando 120 de dano.",
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.VoidVortex) >= 1,
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.OrbitalMines) >= 3 && gm.GetUpgradeLevel(GameManager.UpgradeType.Explosive) >= 1,
+            $"Minas ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.OrbitalMines) : 0)}/3) + Explosiva ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.Explosive) : 0)}/1)"
+        );
+
+        // 5. Rede Neural Tesla
+        CreateCodexCard(gridObj.transform, gm,
+            "🛸 REDE NEURAL TESLA",
+            "Drones Sentinelas (Nv 3) + Perfurante ou Ricochete (Nv 1+)",
+            "Drones disparam rajadas elétricas com arcos secundários saltando em cascata entre até 4 inimigos.",
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.TeslaChain) >= 1,
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.SentinelDrone) >= 3 && (gm.GetUpgradeLevel(GameManager.UpgradeType.Pierce) >= 1 || gm.GetUpgradeLevel(GameManager.UpgradeType.Bounce) >= 1),
+            $"Drones ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.SentinelDrone) : 0)}/3) + Perfurante ou Ricochete (Nv 1+)"
+        );
+
+        // 6. Barreira Hiperiônica
+        CreateCodexCard(gridObj.transform, gm,
+            "🛡️ BARREIRA HIPERIÔNICA",
+            "Escudo Aegis (Nv 3) + Nanites Vampíricos (Nv 1+)",
+            "Ao quebrar ou recarregar, emite uma devastadora onda de choque dourada que repele e esmaga alvos (60 dano).",
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.HyperionBarrier) >= 1,
+            gm != null && gm.GetUpgradeLevel(GameManager.UpgradeType.AegisShield) >= 3 && gm.GetUpgradeLevel(GameManager.UpgradeType.LifeSteal) >= 1,
+            $"Escudo Aegis ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.AegisShield) : 0)}/3) + Nanites ({(gm != null ? gm.GetUpgradeLevel(GameManager.UpgradeType.LifeSteal) : 0)}/1)"
+        );
+
+        // Close Button
+        GameObject closeBtnObj = CreateStyledButton(panel.transform, "VOLTAR / FECHAR", new Color(0.85f, 0.25f, 0.35f), Color.white, () => {
+            Object.Destroy(panel);
+            if (onClose != null) onClose();
+        });
+        RectTransform cbrt = closeBtnObj.GetComponent<RectTransform>();
+        cbrt.anchorMin = new Vector2(0.4f, 0.025f);
+        cbrt.anchorMax = new Vector2(0.6f, 0.085f);
+        cbrt.sizeDelta = Vector2.zero;
+        cbrt.anchoredPosition = Vector2.zero;
+
+        return panel;
+    }
+
+    private static void CreateCodexCard(Transform parent, GameManager gm, string name, string recipe, string effect, bool isEvolved, bool isReady, string progressText)
+    {
+        GameObject card = new GameObject("CodexCard_" + name);
+        card.transform.SetParent(parent, false);
+
+        Image img = card.AddComponent<Image>();
+        Outline outline = card.AddComponent<Outline>();
+
+        string statusTag;
+        Color statusBorder;
+        Color statusBg;
+
+        if (isEvolved)
+        {
+            statusTag = "<color=#ffd700><b>✔ EVOLUÇÃO ATIVA</b></color>";
+            statusBorder = new Color(1f, 0.85f, 0.2f, 1f);
+            statusBg = new Color(0.14f, 0.10f, 0.02f, 0.95f);
+        }
+        else if (isReady)
+        {
+            statusTag = "<color=#00ffcc><b>★ PRONTO PARA EVOLUIR NO PRÓXIMO NÍVEL!</b></color>";
+            statusBorder = new Color(0f, 1f, 0.8f, 1f);
+            statusBg = new Color(0.04f, 0.15f, 0.13f, 0.95f);
+        }
+        else
+        {
+            statusTag = $"<color=#ff6b6b>[BLOQUEADO]</color> <color=#8899aa>{progressText}</color>";
+            statusBorder = new Color(0.2f, 0.3f, 0.45f, 0.8f);
+            statusBg = new Color(0.05f, 0.07f, 0.11f, 0.92f);
+        }
+
+        img.color = statusBg;
+        outline.effectColor = statusBorder;
+        outline.effectDistance = isEvolved ? new Vector2(3f, -3f) : new Vector2(2f, -2f);
+
+        GameObject txtObj = new GameObject("CardText");
+        txtObj.transform.SetParent(card.transform, false);
+        RectTransform trt = txtObj.AddComponent<RectTransform>();
+        trt.anchorMin = new Vector2(0.04f, 0.04f);
+        trt.anchorMax = new Vector2(0.96f, 0.96f);
+        trt.sizeDelta = Vector2.zero;
+        trt.anchoredPosition = Vector2.zero;
+
+        Text txt = txtObj.AddComponent<Text>();
+        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        txt.alignment = TextAnchor.MiddleLeft;
+        txt.color = Color.white;
+        string nameCol = isEvolved ? "#ffd700" : (isReady ? "#00ffff" : "#e0e6ed");
+        txt.text = $"{statusTag}\n" +
+                   $"<size=17><color={nameCol}><b>{name}</b></color></size>\n" +
+                   $"<size=13><color=#ffd280><b>Receita:</b></color> <color=#ffffff>{recipe}</color></size>\n" +
+                   $"<size=11><color=#b0c0d0>{effect}</color></size>";
     }
 }

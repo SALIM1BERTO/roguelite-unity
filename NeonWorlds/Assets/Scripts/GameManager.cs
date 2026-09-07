@@ -51,7 +51,13 @@ public class GameManager : MonoBehaviour
         OrbitalMines,
         SentinelDrone,
         AegisShield,
-        LifeSteal
+        LifeSteal,
+        SupernovaGatling,
+        NebulaFlak,
+        AntimatterLance,
+        VoidVortex,
+        TeslaChain,
+        HyperionBarrier
     }
 
     private UpgradeType[] currentUpgrades = new UpgradeType[3];
@@ -85,10 +91,27 @@ public class GameManager : MonoBehaviour
         return 0;
     }
 
+    public bool IsLegendaryEvolution(UpgradeType type)
+    {
+        return type == UpgradeType.SupernovaGatling ||
+               type == UpgradeType.NebulaFlak ||
+               type == UpgradeType.AntimatterLance ||
+               type == UpgradeType.VoidVortex ||
+               type == UpgradeType.TeslaChain ||
+               type == UpgradeType.HyperionBarrier;
+    }
+
     public int GetMaxLevel(UpgradeType type)
     {
         switch (type)
         {
+            case UpgradeType.SupernovaGatling:
+            case UpgradeType.NebulaFlak:
+            case UpgradeType.AntimatterLance:
+            case UpgradeType.VoidVortex:
+            case UpgradeType.TeslaChain:
+            case UpgradeType.HyperionBarrier:
+                return 1;
             case UpgradeType.Explosive: return 1;
             case UpgradeType.Pierce: return 3;
             case UpgradeType.Bounce: return 3;
@@ -111,6 +134,13 @@ public class GameManager : MonoBehaviour
     {
         switch (type)
         {
+            case UpgradeType.SupernovaGatling:
+            case UpgradeType.NebulaFlak:
+            case UpgradeType.AntimatterLance:
+            case UpgradeType.VoidVortex:
+            case UpgradeType.TeslaChain:
+            case UpgradeType.HyperionBarrier:
+                return UpgradeRarity.Legendary;
             case UpgradeType.Explosive:
             case UpgradeType.OrbitalMines:
             case UpgradeType.SentinelDrone:
@@ -138,10 +168,27 @@ public class GameManager : MonoBehaviour
         GameAudio.Play(AudioCue.LevelUp);
         levelUpPanel.SetActive(true);
 
-        // Build list of valid upgrades not at max level
+        // Check synergies for Legendary Evolutions
+        List<UpgradeType> legendaryPool = new List<UpgradeType>();
+        bool canSupernova = GetUpgradeLevel(UpgradeType.FireRate) >= 5 && GetUpgradeLevel(UpgradeType.Critical) >= 1 && GetUpgradeLevel(UpgradeType.SupernovaGatling) < 1;
+        bool canNebula = GetUpgradeLevel(UpgradeType.Spread) >= 4 && GetUpgradeLevel(UpgradeType.Bounce) >= 1 && GetUpgradeLevel(UpgradeType.NebulaFlak) < 1;
+        bool canAntimatter = GetUpgradeLevel(UpgradeType.Pierce) >= 3 && GetUpgradeLevel(UpgradeType.Damage) >= 3 && GetUpgradeLevel(UpgradeType.AntimatterLance) < 1;
+        bool canVoidVortex = GetUpgradeLevel(UpgradeType.OrbitalMines) >= 3 && GetUpgradeLevel(UpgradeType.Explosive) >= 1 && GetUpgradeLevel(UpgradeType.VoidVortex) < 1;
+        bool canTesla = GetUpgradeLevel(UpgradeType.SentinelDrone) >= 3 && (GetUpgradeLevel(UpgradeType.Pierce) >= 1 || GetUpgradeLevel(UpgradeType.Bounce) >= 1) && GetUpgradeLevel(UpgradeType.TeslaChain) < 1;
+        bool canHyperion = GetUpgradeLevel(UpgradeType.AegisShield) >= 3 && GetUpgradeLevel(UpgradeType.LifeSteal) >= 1 && GetUpgradeLevel(UpgradeType.HyperionBarrier) < 1;
+
+        if (canSupernova) legendaryPool.Add(UpgradeType.SupernovaGatling);
+        if (canNebula) legendaryPool.Add(UpgradeType.NebulaFlak);
+        if (canAntimatter) legendaryPool.Add(UpgradeType.AntimatterLance);
+        if (canVoidVortex) legendaryPool.Add(UpgradeType.VoidVortex);
+        if (canTesla) legendaryPool.Add(UpgradeType.TeslaChain);
+        if (canHyperion) legendaryPool.Add(UpgradeType.HyperionBarrier);
+
+        // Build list of valid normal upgrades not at max level
         List<UpgradeType> pool = new List<UpgradeType>();
         foreach (UpgradeType t in System.Enum.GetValues(typeof(UpgradeType)))
         {
+            if (IsLegendaryEvolution(t)) continue;
             if (GetUpgradeLevel(t) < GetMaxLevel(t))
             {
                 pool.Add(t);
@@ -155,6 +202,12 @@ public class GameManager : MonoBehaviour
             var temp = pool[i];
             pool[i] = pool[r];
             pool[r] = temp;
+        }
+
+        // Prioritize available legendary evolutions at the front of the pool
+        for (int l = 0; l < legendaryPool.Count; l++)
+        {
+            pool.Insert(l, legendaryPool[l]);
         }
 
         for (int i = 0; i < 3; i++)
@@ -243,6 +296,36 @@ public class GameManager : MonoBehaviour
                     upgradeTitles[i].text = "Nanites Vampíricos" + levelBadge;
                     upgradeDescs[i].text = "+6% de chance de restaurar vida ao derrotar inimigos.";
                     break;
+                case UpgradeType.SupernovaGatling:
+                    if (iconText != null) { iconText.text = "☀️"; iconText.color = new Color(1f, 0.85f, 0.1f); }
+                    upgradeTitles[i].text = "Supernova Gatling\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
+                    upgradeDescs[i].text = "Blaster dispara rajadas douradas supersônicas com micro-explosões solares em área!";
+                    break;
+                case UpgradeType.NebulaFlak:
+                    if (iconText != null) { iconText.text = "🌌"; iconText.color = new Color(0.75f, 0.45f, 1f); }
+                    upgradeTitles[i].text = "Canhão Nebular\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
+                    upgradeDescs[i].text = "Shotgun cósmica dispara 8 fragmentos que se dividem em estilhaços ao impactar!";
+                    break;
+                case UpgradeType.AntimatterLance:
+                    if (iconText != null) { iconText.text = "⚡"; iconText.color = new Color(0f, 0.9f, 1f); }
+                    upgradeTitles[i].text = "Lança de Anti-Matéria\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
+                    upgradeDescs[i].text = "Railgun dispara feixes perfurantes que deixam poças de radiação cósmica no planeta!";
+                    break;
+                case UpgradeType.VoidVortex:
+                    if (iconText != null) { iconText.text = "🕳️"; iconText.color = new Color(0.9f, 0.1f, 1f); }
+                    upgradeTitles[i].text = "Vórtice de Singularidade\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
+                    upgradeDescs[i].text = "Minas orbitais geram buracos negros que sugam inimigos e implodem causando 120 de dano!";
+                    break;
+                case UpgradeType.TeslaChain:
+                    if (iconText != null) { iconText.text = "🛸"; iconText.color = new Color(1f, 0.95f, 0.2f); }
+                    upgradeTitles[i].text = "Rede Neural Tesla\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
+                    upgradeDescs[i].text = "Drones disparam arcos elétricos que saltam em cascata para até 3 inimigos próximos!";
+                    break;
+                case UpgradeType.HyperionBarrier:
+                    if (iconText != null) { iconText.text = "🛡️"; iconText.color = new Color(1f, 0.8f, 0.1f); }
+                    upgradeTitles[i].text = "Barreira Hiperiônica\n<color=#ffd700>[EVOLUÇÃO LENDÁRIA ★]</color>";
+                    upgradeDescs[i].text = "Escudo Aegis emite ondas de choque douradas ao quebrar e recarregar, repelindo e esmagando alvos!";
+                    break;
             }
 
             int index = i;
@@ -328,6 +411,57 @@ public class GameManager : MonoBehaviour
                 break;
             case UpgradeType.LifeSteal:
                 lifeStealChance = Mathf.Min(0.25f, lifeStealChance + 0.06f);
+                break;
+            case UpgradeType.SupernovaGatling:
+                if (w != null)
+                {
+                    w.isSupernova = true;
+                    w.currentWeapon = Weapon.WeaponType.Blaster;
+                    w.SetupWeapon();
+                }
+                break;
+            case UpgradeType.NebulaFlak:
+                if (w != null)
+                {
+                    w.isNebulaFlak = true;
+                    w.currentWeapon = Weapon.WeaponType.Shotgun;
+                    w.SetupWeapon();
+                }
+                break;
+            case UpgradeType.AntimatterLance:
+                if (w != null)
+                {
+                    w.isAntimatterLance = true;
+                    w.currentWeapon = Weapon.WeaponType.Railgun;
+                    w.SetupWeapon();
+                }
+                break;
+            case UpgradeType.VoidVortex:
+                if (player != null)
+                {
+                    OrbitalMines mines = player.GetComponent<OrbitalMines>();
+                    if (mines == null) mines = player.gameObject.AddComponent<OrbitalMines>();
+                    mines.isVoidVortex = true;
+                    if (mines.level < 3) mines.level = 3;
+                }
+                break;
+            case UpgradeType.TeslaChain:
+                if (player != null)
+                {
+                    SentinelDrone drone = player.GetComponent<SentinelDrone>();
+                    if (drone == null) drone = player.gameObject.AddComponent<SentinelDrone>();
+                    drone.isTeslaChain = true;
+                    drone.SetLevel(Mathf.Max(3, drone.level));
+                }
+                break;
+            case UpgradeType.HyperionBarrier:
+                if (player != null)
+                {
+                    ShieldAegis shield = player.GetComponent<ShieldAegis>();
+                    if (shield == null) shield = player.gameObject.AddComponent<ShieldAegis>();
+                    shield.isHyperionBarrier = true;
+                    shield.SetLevel(Mathf.Max(3, shield.level));
+                }
                 break;
         }
 
