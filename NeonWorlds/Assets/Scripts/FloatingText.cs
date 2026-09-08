@@ -6,16 +6,22 @@ public class FloatingText : MonoBehaviour
     const int MaximumVisible=32;
     static readonly List<FloatingText> visible=new List<FloatingText>();
     static readonly Queue<FloatingText> pool=new Queue<FloatingText>();
-    static int sequence;
+    static int sequence, budgetFrame=-1, spawnedThisFrame;
+    static Camera cachedCam;
+    static int camFrame = -1;
+    static Font sharedFont;
     TextMesh textMesh;
     MeshRenderer meshRenderer;
     float timer,lifetime=.7f,pixelHeight=14f;
     Vector3 drift;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetState() { visible.Clear(); pool.Clear(); sequence=0; }
+    static void ResetState() { visible.Clear(); pool.Clear(); sequence=0; budgetFrame=-1; spawnedThisFrame=0; sharedFont=null; cachedCam=null; camFrame=-1; }
 
     public static FloatingText Spawn(Vector3 pos, Transform parent, int damage, bool isCrit, DamageTextStyle style=DamageTextStyle.Normal)
     {
+        if(budgetFrame!=Time.frameCount){budgetFrame=Time.frameCount;spawnedThisFrame=0;}
+        if(spawnedThisFrame >= (isCrit ? 36 : 28))return null;
+        spawnedThisFrame++;
         FloatingText ft = null;
         while (pool.Count > 0 && ft == null)
         {
@@ -34,9 +40,15 @@ public class FloatingText : MonoBehaviour
         return ft;
     }
 
+    static int cleanupFrame = -1;
     void OnEnable()
     {
-        visible.RemoveAll(item=>item==null);
+        // Only clean null refs once per frame instead of on every spawn
+        if (cleanupFrame != Time.frameCount)
+        {
+            cleanupFrame = Time.frameCount;
+            visible.RemoveAll(item=>item==null);
+        }
         while(visible.Count>=MaximumVisible)
         {
             FloatingText oldest=visible[0]; visible.RemoveAt(0);
@@ -65,7 +77,8 @@ public class FloatingText : MonoBehaviour
         lifetime=sizeMultiplier>1 ? .8f : .7f;
         textMesh=GetComponent<TextMesh>(); if(textMesh==null) textMesh=gameObject.AddComponent<TextMesh>();
         textMesh.text=text; textMesh.anchor=TextAnchor.MiddleCenter; textMesh.alignment=TextAlignment.Center;
-        textMesh.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if(sharedFont==null)sharedFont=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if(textMesh.font!=sharedFont)textMesh.font=sharedFont;
         textMesh.fontSize=48; textMesh.characterSize=.1f; textMesh.color=color;
         meshRenderer=GetComponent<MeshRenderer>(); meshRenderer.sharedMaterial=textMesh.font.material;
         Camera camera=Camera.main;
@@ -88,7 +101,8 @@ public class FloatingText : MonoBehaviour
     void UpdatePresentation()
     {
         if(textMesh==null || meshRenderer==null) return;
-        Camera camera=Camera.main;
+        if(camFrame!=Time.frameCount){camFrame=Time.frameCount;cachedCam=Camera.main;}
+        Camera camera=cachedCam;
         float worldHeight=.35f;
         if(camera!=null)
         {

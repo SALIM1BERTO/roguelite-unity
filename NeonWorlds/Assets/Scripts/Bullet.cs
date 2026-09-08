@@ -124,13 +124,7 @@ public class Bullet : MonoBehaviour
         {
             if (!hitBosses.Add(boss)) return;
             boss.TakeDamage(damage, isCritical, isSupernova ? DamageTextStyle.Area : DamageTextStyle.Normal);
-            GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
-            if (fxPrefab)
-            {
-                GameObject fx = Instantiate(fxPrefab, transform.position, Quaternion.identity);
-                if (planet != null) fx.transform.SetParent(planet, true);
-                Destroy(fx, 1f);
-            }
+            CombatImpactPool.Play(transform.position, planet);
 
             if (isSupernova)
             {
@@ -207,13 +201,7 @@ public class Bullet : MonoBehaviour
                 }
             }
 
-            GameObject fxPrefab = Resources.Load<GameObject>("BulletImpactFX");
-            if (fxPrefab)
-            {
-                GameObject fx = Instantiate(fxPrefab, transform.position, Quaternion.identity);
-                if (planet != null) fx.transform.SetParent(planet, true);
-                Destroy(fx, 1f);
-            }
+            CombatImpactPool.Play(transform.position, planet);
 
             if (pierceCount > 0)
             {
@@ -255,6 +243,9 @@ public class Bullet : MonoBehaviour
         }
     }
 
+    private static Material s_antimatterMat;
+    private static Material s_nebulaMat;
+
     void SpawnAntimatterZone()
     {
         if (planet == null) return;
@@ -267,13 +258,15 @@ public class Bullet : MonoBehaviour
         zone.transform.localScale = new Vector3(1.6f / pScale, 0.04f / pScale, 1.6f / pScale);
         Destroy(zone.GetComponent<Collider>());
 
-        MeshRenderer mr = zone.GetComponent<MeshRenderer>();
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color zoneColor = new Color(0.65f, 0f, 1f, 0.6f); // Radiant Violet
-        mat.SetColor("_BaseColor", zoneColor);
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", zoneColor * 3f);
-        mr.material = mat;
+        if (s_antimatterMat == null)
+        {
+            s_antimatterMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color zoneColor = new Color(0.65f, 0f, 1f, 0.6f);
+            s_antimatterMat.SetColor("_BaseColor", zoneColor);
+            s_antimatterMat.EnableKeyword("_EMISSION");
+            s_antimatterMat.SetColor("_EmissionColor", zoneColor * 3f);
+        }
+        zone.GetComponent<MeshRenderer>().sharedMaterial = s_antimatterMat;
 
         AntimatterZoneLogic logic = zone.AddComponent<AntimatterZoneLogic>();
         logic.Setup(Mathf.Max(5, Mathf.RoundToInt(damage * 0.35f)));
@@ -282,6 +275,15 @@ public class Bullet : MonoBehaviour
     void SpawnNebulaShards()
     {
         if (planet == null) return;
+        if (s_nebulaMat == null)
+        {
+            s_nebulaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Color shardColor = new Color(1f, 0.2f, 0.8f);
+            s_nebulaMat.SetColor("_BaseColor", shardColor);
+            s_nebulaMat.EnableKeyword("_EMISSION");
+            s_nebulaMat.SetColor("_EmissionColor", shardColor * 4f);
+        }
+
         float shardAngleStep = 90f;
         for (int i = 0; i < 4; i++)
         {
@@ -296,13 +298,7 @@ public class Bullet : MonoBehaviour
             Vector3 shootDir = Quaternion.AngleAxis(i * shardAngleStep + 45f, transform.up) * transform.forward;
             shard.transform.rotation = Quaternion.LookRotation(shootDir, transform.up);
 
-            MeshRenderer mr = shard.GetComponent<MeshRenderer>();
-            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            Color shardColor = new Color(1f, 0.2f, 0.8f); // Neon Magenta/Pink
-            mat.SetColor("_BaseColor", shardColor);
-            mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", shardColor * 4f);
-            mr.material = mat;
+            shard.GetComponent<MeshRenderer>().sharedMaterial = s_nebulaMat;
 
             NebulaShardLogic logic = shard.AddComponent<NebulaShardLogic>();
             logic.Setup(Mathf.Max(4, Mathf.RoundToInt(damage * 0.55f)), planet, 28f);
@@ -324,6 +320,7 @@ public class NebulaShardLogic : MonoBehaviour
     private Transform planet;
     private float speed = 25f;
     private float lifetime = 0.8f;
+    private float checkTimer;
 
     public void Setup(int dmg, Transform p, float spd)
     {
@@ -353,6 +350,11 @@ public class NebulaShardLogic : MonoBehaviour
         {
             transform.position += transform.forward * speed * Time.deltaTime;
         }
+
+        // Throttle physics queries to every ~0.05s instead of every frame
+        checkTimer -= Time.deltaTime;
+        if (checkTimer > 0f) return;
+        checkTimer = 0.05f;
 
         Collider[] hits = Physics.OverlapSphere(transform.position, 0.7f);
         foreach (Collider c in hits)

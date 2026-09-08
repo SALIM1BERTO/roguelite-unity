@@ -5,7 +5,16 @@ using System.Collections.Generic;
 
 public class Enemy : MonoBehaviour
 {
+    public float xpRewardMultiplier = 1f;
     public static readonly List<Enemy> activeEnemies = new List<Enemy>();
+
+    // Per-frame throttle to prevent burst stutter when hitting many enemies at once
+    private static int s_hitSoundFrame = -1;
+    private static int s_hitSoundCount;
+    private static int s_floatTextFrame = -1;
+    private static int s_floatTextCount;
+    private const int MaxHitSoundsPerFrame = 8;
+    private const int MaxFloatTextsPerFrame = 12;
 
     public int hp = 30;
     private Transform hpFill;
@@ -35,9 +44,11 @@ public class Enemy : MonoBehaviour
     private Material originalMat;
     private Material flashMat;
     private MeshRenderer meshR;
-    private Coroutine flashRoutine;
+    private float flashUntil;
+    private bool healthDirty;
     private Coroutine deathRoutine;
     private GravityBody gravityBody;
+    private StatusEffectReceiver statusReceiver;
     public Vector3 baseWorldScale = Vector3.one;
 
     void Awake()
@@ -49,6 +60,7 @@ public class Enemy : MonoBehaviour
 
         staggerOffset = UnityEngine.Random.Range(0, 3);
         gravityBody = GetComponent<GravityBody>();
+        statusReceiver = GetComponent<StatusEffectReceiver>();
         if (gravityBody != null)
         {
             gravityBody.surfaceOffset = 0.5f;
@@ -122,6 +134,7 @@ public class Enemy : MonoBehaviour
 
     void OnEnable()
     {
+        cachedSeparation=Vector3.zero;
         hp = maxHp;
         isDead = false;
         lastAttackTime = 0f;
@@ -137,8 +150,7 @@ public class Enemy : MonoBehaviour
     void OnDisable()
     {
         activeEnemies.Remove(this);
-        if (flashRoutine != null) StopCoroutine(flashRoutine);
-        flashRoutine = null;
+        flashUntil=0; healthDirty=false;
         if (deathRoutine != null) StopCoroutine(deathRoutine);
         deathRoutine = null;
         ResetScale();
@@ -159,8 +171,7 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         if (isDead) return;
-        var status = GetComponent<StatusEffectReceiver>();
-        if (status != null && status.IsStunned) return;
+        if (statusReceiver != null && statusReceiver.IsStunned) return;
         if (GameManager.Instance == null || GameManager.Instance.player == null) return;
 
         // Verify that the player and enemy are on the exact same planet
@@ -193,46 +204,8 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // 2. Separation from other enemies (Anti-Overlap) - Staggered & AABB Optimized
         if (((staggerOffset + Time.frameCount) % 3) == 0)
-        {
-            Vector3 myPos = transform.position;
-            Vector3 separationCalc = Vector3.zero;
-            int neighborCount = 0;
-            Transform myParent = transform.parent;
-
-            for (int i = 0; i < activeEnemies.Count; i++)
-            {
-                Enemy other = activeEnemies[i];
-                if (other == this || other == null || other.isDead) continue;
-                if (other.transform.parent != myParent) continue;
-
-                Vector3 otherPos = other.transform.position;
-                Vector3 diff = myPos - otherPos;
-
-                // Fast AABB rejection before planar projection and sqrt
-                if (Mathf.Abs(diff.x) > avoidanceRadius || Mathf.Abs(diff.y) > avoidanceRadius || Mathf.Abs(diff.z) > avoidanceRadius)
-                    continue;
-
-                Vector3 planarDiff = Vector3.ProjectOnPlane(diff, surfaceNormal);
-                float sqrDist = planarDiff.sqrMagnitude;
-
-                if (sqrDist < avoidanceRadius * avoidanceRadius && sqrDist > 0.0001f)
-                {
-                    float d = Mathf.Sqrt(sqrDist);
-                    float strength = (avoidanceRadius - d) / avoidanceRadius;
-                    separationCalc += (planarDiff / d) * strength;
-                    neighborCount++;
-                    if (neighborCount >= 6) break; // Cap to 6 nearest pushing neighbors
-                }
-            }
-
-            if (neighborCount > 0)
-            {
-                separationCalc /= neighborCount;
-            }
-            cachedSeparation = separationCalc;
-        }
+            cachedSeparation = EnemyNeighborhood.Separation(this,transform.position,surfaceNormal,avoidanceRadius);
 
         Vector3 separation = cachedSeparation;
 
@@ -276,8 +249,7 @@ public class Enemy : MonoBehaviour
     void TryDamagePlayer(GameObject obj)
     {
         if (isDead) return;
-        var status = GetComponent<StatusEffectReceiver>();
-        if (status != null && status.IsStunned) return;
+        if (statusReceiver != null && statusReceiver.IsStunned) return;
         if (obj.GetComponentInParent<PlayerMovement>() != null || obj.GetComponentInParent<PlayerShip>() != null)
         {
             GravityBody playerBody = obj.GetComponentInParent<GravityBody>();
@@ -314,33 +286,40 @@ public class Enemy : MonoBehaviour
     {
         if (isDead || !isActiveAndEnabled || damage <= 0) return;
         
-        var receiver = GetComponent<StatusEffectReceiver>();
-        if (receiver != null) damage = receiver.ModifyIncomingDamage(damage);
+        if (statusReceiver != null) damage = statusReceiver.ModifyIncomingDamage(damage);
         hp -= damage;
         isDead = hp <= 0;
-        if (isCrit)
+
+        // Throttle hit sounds per frame to prevent audio system overload
+        if (s_hitSoundFrame != Time.frameCount) { s_hitSoundFrame = Time.frameCount; s_hitSoundCount = 0; }
+        if (s_hitSoundCount < MaxHitSoundsPerFrame)
         {
-            GameAudio.Play(AudioCue.CriticalHit);
-            HitStop.Trigger(0.04f, 0.05f);
+            s_hitSoundCount++;
+            if (isCrit)
+                GameAudio.Play(AudioCue.CriticalHit);
+            else
+                GameAudio.PlayAt(AudioCue.Hit, transform.position,
+                    gravityBody != null ? gravityBody.planet : null);
         }
-        else
-        {
-            GameAudio.PlayAt(AudioCue.Hit, transform.position,
-                gravityBody != null ? gravityBody.planet : null);
-        }
-        UpdateHealthBar();
+        healthDirty=true;
         
         if (meshR != null && flashMat != null && gameObject.activeInHierarchy) {
-            if (flashRoutine != null) StopCoroutine(flashRoutine);
-            flashRoutine = StartCoroutine(FlashRoutine());
+            flashUntil=Time.time+.05f;
+            if(meshR.sharedMaterial!=flashMat)meshR.sharedMaterial=flashMat;
         }
 
-        Transform planet = gravityBody != null && gravityBody.planet != null
-            ? gravityBody.planet.transform : null;
-        Vector3 surfaceNormal = planet != null
-            ? (transform.position - planet.position).normalized : Vector3.up;
-        Vector3 textPosition = transform.position + surfaceNormal;
-        FloatingText.Spawn(textPosition, planet, damage, isCrit, style);
+        // Throttle floating text per frame to prevent TextMesh allocation spikes
+        if (s_floatTextFrame != Time.frameCount) { s_floatTextFrame = Time.frameCount; s_floatTextCount = 0; }
+        if (s_floatTextCount < MaxFloatTextsPerFrame)
+        {
+            s_floatTextCount++;
+            Transform planet = gravityBody != null && gravityBody.planet != null
+                ? gravityBody.planet.transform : null;
+            Vector3 surfaceNormal = planet != null
+                ? (transform.position - planet.position).normalized : Vector3.up;
+            Vector3 textPosition = transform.position + surfaceNormal;
+            FloatingText.Spawn(textPosition, planet, damage, isCrit, style);
+        }
 
         if (isDead)
         {
@@ -355,14 +334,6 @@ public class Enemy : MonoBehaviour
         }
     }
     
-    IEnumerator FlashRoutine()
-    {
-        meshR.sharedMaterial = flashMat;
-        yield return new WaitForSeconds(0.05f);
-        RestoreMaterial();
-        flashRoutine = null;
-    }
-
     void UpdateHealthBar()
     {
         if (hpFill != null) {
@@ -375,6 +346,8 @@ public class Enemy : MonoBehaviour
 
     void LateUpdate()
     {
+        if(!isDead && flashUntil>0 && Time.time>=flashUntil){flashUntil=0;RestoreMaterial();}
+        if(healthDirty){healthDirty=false;UpdateHealthBar();}
         if(hpFill!=null && hpFill.parent.gameObject.activeSelf && Camera.main!=null) hpFill.parent.rotation=Camera.main.transform.rotation;
     }
 
@@ -420,10 +393,8 @@ public class Enemy : MonoBehaviour
         // Spawn XP Gem
         if (GameManager.Instance != null && EnemySpawner.Instance != null && EnemySpawner.Instance.gemPool != null)
         {
-            GameObject gem = EnemySpawner.Instance.gemPool.Get();
-            GravityBody gemGb = gem.GetComponent<GravityBody>();
-            if (gemGb != null) gemGb.planet = gravityBody != null ? gravityBody.planet : null;
-            gem.transform.position = transform.position;
+            XpGem.Drop(gravityBody != null ? gravityBody.planet : null, transform.position,
+                XpProgression.Reward(GameManager.Instance.matchTime, xpRewardMultiplier));
         }
 
         deathRoutine = null;
