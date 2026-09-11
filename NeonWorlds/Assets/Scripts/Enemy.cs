@@ -252,7 +252,7 @@ public class Enemy : MonoBehaviour
         if (statusReceiver != null && statusReceiver.IsStunned) return;
         if (obj.GetComponentInParent<PlayerMovement>() != null || obj.GetComponentInParent<PlayerShip>() != null)
         {
-            GravityBody playerBody = obj.GetComponentInParent<GravityBody>();
+            GravityBody playerBody = GetPlayerBody();
             if (playerBody == null || playerBody.planet == null) return;
 
             Transform enemyPlanet = gravityBody != null && gravityBody.planet != null 
