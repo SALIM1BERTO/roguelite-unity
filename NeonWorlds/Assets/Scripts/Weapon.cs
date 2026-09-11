@@ -52,9 +52,27 @@ public class Weapon : MonoBehaviour
                 basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
             case WeaponType.Shotgun:
+                int shotgunLevel = GameManager.Instance != null ? GameManager.Instance.GetUpgradeLevel(GameManager.UpgradeType.ShotgunMastery) : 0;
+                int scatter = GameManager.Instance != null ? GameManager.Instance.GetUpgradeLevel(GameManager.UpgradeType.ScatterMatrix) : 0;
                 baseFireRate = isNebulaFlak ? 1.4f : 1.0f;
-                baseDamage = isNebulaFlak ? 10 : 6;
-                baseSpreadCount = isNebulaFlak ? 8 : 5;
+                // Round upward so every mastery level visibly increases this low base value.
+                baseDamage = Mathf.CeilToInt((isNebulaFlak ? 12 : 8) * (1f + shotgunLevel * .15f));
+                baseSpreadCount = (isNebulaFlak ? 8 : 5) + scatter;
+                basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
+                break;
+            case WeaponType.SeekerSwarm:
+                int seekerLevel = GameManager.Instance != null ? GameManager.Instance.GetUpgradeLevel(GameManager.UpgradeType.SeekerSwarmMastery) : 0;
+                baseFireRate = .7f; baseDamage = Mathf.RoundToInt(14f * (1f + seekerLevel * .15f)); baseSpreadCount = isHunterKiller ? 8 : 4;
+                basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
+                break;
+            case WeaponType.Singularity:
+                int singularityLevel = GameManager.Instance != null ? GameManager.Instance.GetUpgradeLevel(GameManager.UpgradeType.SingularityMastery) : 0;
+                baseFireRate = .5f; baseDamage = Mathf.RoundToInt(5f * (1f + singularityLevel * .15f)); baseSpreadCount = 1;
+                basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
+                break;
+            case WeaponType.ArcDischarger:
+                int arcLevel = GameManager.Instance != null ? GameManager.Instance.GetUpgradeLevel(GameManager.UpgradeType.ArcDischargerMastery) : 0;
+                baseFireRate = 1.25f; baseDamage = Mathf.RoundToInt(8f * (1f + arcLevel * .15f)); baseSpreadCount = 1;
                 basePierceCount = 0; baseBounceCount = 0; baseExplosive = false;
                 break;
             case WeaponType.PlasmaFlamer:
