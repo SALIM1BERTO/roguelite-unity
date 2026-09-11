@@ -245,8 +245,10 @@ public class EnemySpawner : MonoBehaviour
         float hpMultiplier = 1f + (1.0f * tier); // Each tier has +100% more base HP
         float speedMultiplier = 1f + (0.1f * tier);
         
-        if (e.baseHp == -1) e.baseHp = e.maxHp; 
-        e.maxHp = (int)(e.baseHp * hpMultiplier);
+                if (e.baseHp == -1) e.baseHp = e.maxHp; 
+        
+        float kindMultiplier = (kind == EnemyKind.Tank || kind == EnemyKind.Burrower) ? 3.0f : 1f;
+        e.maxHp = (int)(e.baseHp * hpMultiplier * kindMultiplier);
         e.hp = e.maxHp;
         
         if (e.baseSpeed < 0) e.baseSpeed = e.speed;
@@ -279,5 +281,6 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 }
+
 
 

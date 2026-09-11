@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Pool;
 using System.Collections.Generic;
 
@@ -6,9 +6,9 @@ public class BossLeviathan : MonoBehaviour
 {
     public static BossLeviathan Instance;
     [Header("Combat (world units)")]
-    public int maxHp=1800;
+    public int maxHp=25000;
     public int hp;
-    public float baseSpeed=2.8f;
+    public float baseSpeed=4.2f;
     public int contactDamage=12;
     public float contactCooldown=.9f;
     [Range(.2f,.6f)] public float visualScale=.38f;
@@ -185,9 +185,9 @@ public class BossLeviathan : MonoBehaviour
     }
     void FireRadialNova()
     {
-        int count=currentPhase==1 ? 8 : currentPhase==2 ? 10 : 12;
+        int count=currentPhase==1 ? 14 : currentPhase==2 ? 20 : 28;
         Vector3 normal=(transform.position-Planet.position).normalized;
-        float speed=6.5f+currentPhase;
+        float speed=9.5f+currentPhase*1.5f;
         for(int i=0;i<count;i++)
         {
             float angle=i*360f/count;
@@ -218,7 +218,7 @@ public class BossLeviathan : MonoBehaviour
     }
     void SpawnMinionWave()
     {
-        if(EnemySpawner.Instance==null || EscortCount>=(currentPhase==3 ? 3 : 2)) return;
+        if(EnemySpawner.Instance==null || EscortCount>=(currentPhase==3 ? 8 : 4)) return;
         Vector3 dir=Vector3.Cross(transform.up,transform.forward).normalized;
         Vector3 position=BossWorldMotion.SurfacePoint(Planet,transform.position,dir,3f,.5f);
         Enemy escort=EnemySpawner.Instance.SpawnBossMinion(gravityBody.planet,position);
@@ -235,6 +235,8 @@ public class BossLeviathan : MonoBehaviour
     public void TakeDamage(int damage,bool isCrit,DamageTextStyle style)
     {
         if(isDead || damage<=0) return;
+        var receiver=GetComponent<StatusEffectReceiver>();
+        if(receiver!=null) damage=receiver.ModifyIncomingDamage(damage);
         hp=Mathf.Max(0,hp-damage); flashUntil=Time.time+.06f;
         GameAudio.PlayAt(isCrit ? AudioCue.CriticalHit : AudioCue.Hit,transform.position,gravityBody.planet);
         SpawnDamageText(damage,isCrit,style);
@@ -387,3 +389,4 @@ public class BossLeviathan : MonoBehaviour
 
 
 }
+

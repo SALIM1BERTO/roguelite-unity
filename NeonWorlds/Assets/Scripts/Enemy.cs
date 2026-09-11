@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.Pool;
 using System.Collections;
 using System.Collections.Generic;
@@ -96,7 +96,20 @@ public class Enemy : MonoBehaviour
             pScale = transform.parent.lossyScale.x;
         }
         pScale = Mathf.Max(0.001f, pScale);
-        transform.localScale = baseWorldScale / pScale;
+
+        Vector3 finalScale = baseWorldScale;
+        if (baseHp > 0 && maxHp > baseHp)
+        {
+            float hpRatio = (float)maxHp / baseHp;
+            if (gameObject.name.Contains("Tank")) {
+                finalScale += new Vector3(hpRatio * 0.25f, hpRatio * 0.25f, hpRatio * 0.25f);
+            } else if (gameObject.name.Contains("Swarmer")) {
+                finalScale += new Vector3(0, 0, hpRatio * 0.4f);
+            } else {
+                finalScale += new Vector3(0, hpRatio * 0.5f, 0);
+            }
+        }
+        transform.localScale = finalScale / pScale;
     }
 
     void Start()
