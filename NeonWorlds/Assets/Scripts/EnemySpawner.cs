@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Pool;
 using System.Collections;
 
@@ -154,15 +154,14 @@ public class EnemySpawner : MonoBehaviour
     public static int ShielderLimitFor(float seconds) { return Mathf.Min(7, 2 + Mathf.FloorToInt(Mathf.Max(0f, seconds) / 180f)); }
     public static int BurrowerLimitFor(float seconds) { return seconds < 240f ? 0 : Mathf.Min(8, 2 + Mathf.FloorToInt((seconds - 240f) / 180f)); }
 
-    public static EnemyKind SelectKind(float seconds, float roll)
+        public static EnemyKind SelectKind(float seconds, float roll)
     {
         roll = Mathf.Clamp01(roll);
-        if (seconds < 45f) return roll < .88f ? EnemyKind.Standard : EnemyKind.Swarmer;
-        if (seconds < 90f) return roll < .70f ? EnemyKind.Standard : roll < .95f ? EnemyKind.Swarmer : EnemyKind.Volatile;
-        if (seconds < 180f) return roll < .45f ? EnemyKind.Standard : roll < .75f ? EnemyKind.Swarmer : roll < .85f ? EnemyKind.Volatile : roll < .95f ? EnemyKind.Sniper : EnemyKind.Tank;
-        if (seconds < 240f) return roll < .23f ? EnemyKind.Standard : roll < .55f ? EnemyKind.Swarmer : roll < .70f ? EnemyKind.Volatile : roll < .82f ? EnemyKind.Sniper : roll < .90f ? EnemyKind.Shielder : EnemyKind.Tank;
-        if (seconds < 300f) return roll < .22f ? EnemyKind.Standard : roll < .52f ? EnemyKind.Swarmer : roll < .67f ? EnemyKind.Volatile : roll < .79f ? EnemyKind.Sniper : roll < .84f ? EnemyKind.Burrower : roll < .91f ? EnemyKind.Shielder : EnemyKind.Tank;
-        return roll < .17f ? EnemyKind.Standard : roll < .42f ? EnemyKind.Swarmer : roll < .62f ? EnemyKind.Volatile : roll < .74f ? EnemyKind.Sniper : roll < .81f ? EnemyKind.Burrower : roll < .88f ? EnemyKind.Shielder : EnemyKind.Tank;
+        if (seconds < 75f) return EnemyKind.Standard; 
+        if (seconds < 150f) return roll < .75f ? EnemyKind.Standard : EnemyKind.Swarmer;
+        if (seconds < 240f) return roll < .50f ? EnemyKind.Standard : roll < .80f ? EnemyKind.Swarmer : roll < .95f ? EnemyKind.Sniper : EnemyKind.Tank;
+        if (seconds < 330f) return roll < .35f ? EnemyKind.Standard : roll < .65f ? EnemyKind.Swarmer : roll < .75f ? EnemyKind.Volatile : roll < .87f ? EnemyKind.Sniper : EnemyKind.Tank;
+        return roll < .20f ? EnemyKind.Standard : roll < .45f ? EnemyKind.Swarmer : roll < .60f ? EnemyKind.Volatile : roll < .72f ? EnemyKind.Sniper : roll < .80f ? EnemyKind.Burrower : roll < .88f ? EnemyKind.Shielder : EnemyKind.Tank;
     }
 
     public void SpawnBoss()
@@ -241,21 +240,32 @@ public class EnemySpawner : MonoBehaviour
             if (selectedPool == shielderPool) e.xpRewardMultiplier = 1.8f;
             if (selectedPool == burrowerPool) e.xpRewardMultiplier = 1.65f;
             
-        // Boost enemy health and speed based on time
-            // Scaling: +15% HP per minute, +2% speed per minute, +1 Damage every 2 minutes
-            float minutesPassed = gameTimer / 60f;
-            float hpMultiplier = 1f + (0.15f * minutesPassed);
-            float speedMultiplier = 1f + Mathf.Min(0.3f, 0.02f * minutesPassed);
-            
-            if (e.baseHp == -1) e.baseHp = e.maxHp; 
-            e.maxHp = (int)(e.baseHp * hpMultiplier);
-            e.hp = e.maxHp;
-            
-            if (e.baseSpeed < 0) e.baseSpeed = e.speed;
-            e.speed = e.baseSpeed * speedMultiplier;
-            
-            if (e.baseAttackDamage == -1) e.baseAttackDamage = e.attackDamage;
-            e.attackDamage = e.baseAttackDamage + Mathf.FloorToInt(minutesPassed / 2f);
+                // Enemy Variants (Tiers): Increase stats in discrete steps and darken color to visually indicate new variant.
+        int tier = Mathf.FloorToInt(gameTimer / 150f); // Tiers upgrade every 2.5 minutes
+        float hpMultiplier = 1f + (1.0f * tier); // Each tier has +100% more base HP
+        float speedMultiplier = 1f + (0.1f * tier);
+        
+        if (e.baseHp == -1) e.baseHp = e.maxHp; 
+        e.maxHp = (int)(e.baseHp * hpMultiplier);
+        e.hp = e.maxHp;
+        
+        if (e.baseSpeed < 0) e.baseSpeed = e.speed;
+        e.speed = e.baseSpeed * speedMultiplier;
+        
+        if (e.baseAttackDamage == -1) e.baseAttackDamage = e.attackDamage;
+        e.attackDamage = e.baseAttackDamage + (tier * 4);
+
+        if (tier > 0 && e.meshR != null)
+        {
+            MaterialPropertyBlock block = new MaterialPropertyBlock();
+            e.meshR.GetPropertyBlock(block);
+            Color baseColor = Color.white;
+            if (e.meshR.sharedMaterial != null && e.meshR.sharedMaterial.HasProperty("_Color")) 
+                baseColor = e.meshR.sharedMaterial.color;
+            float tint = Mathf.Pow(0.6f, tier);
+            block.SetColor("_Color", new Color(baseColor.r, baseColor.g * tint, baseColor.b * tint, baseColor.a));
+            e.meshR.SetPropertyBlock(block);
+        }
 
             GravityBody gravity = enemy.GetComponent<GravityBody>();
             gravity.planet = currentPlanet;
@@ -269,3 +279,5 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 }
+
+

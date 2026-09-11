@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Pool;
 using System.Collections;
 using System.Collections.Generic;
@@ -396,6 +396,24 @@ public class Enemy : MonoBehaviour
         {
             XpGem.Drop(gravityBody != null ? gravityBody.planet : null, transform.position,
                 XpProgression.Reward(GameManager.Instance.matchTime, xpRewardMultiplier));
+
+        // Drop Care Package from strong enemies
+        if (GameManager.Instance != null && GameManager.Instance.matchTime > 30f)
+        {
+            float dropChance = 0.005f; 
+            if (maxHp > 60) dropChance = 0.02f; 
+            if (maxHp > 150) dropChance = 0.06f; 
+
+            if (Random.value < dropChance)
+            {
+                GameObject dropObj = new GameObject("CarePackageDrop");
+                dropObj.transform.position = transform.position;
+                Vector3 normal = gravityBody != null && gravityBody.planet != null ? (transform.position - gravityBody.planet.transform.position).normalized : Vector3.up;
+                dropObj.transform.up = normal;
+                CarePackageDrop drop = dropObj.AddComponent<CarePackageDrop>();
+                drop.Setup(gravityBody != null ? gravityBody.planet.transform : null, normal, gravityBody != null && gravityBody.planet != null ? gravityBody.planet.transform.lossyScale.x : 1f);
+            }
+        }
         }
 
         deathRoutine = null;

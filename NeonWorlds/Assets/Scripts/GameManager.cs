@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -803,7 +803,7 @@ public class GameManager : MonoBehaviour
 
     IEnumerator CarePackageSchedulerRoutine()
     {
-        yield return new WaitForSeconds(45f); // First supply drop after 45s
+        yield break;
         while (!isGameOver)
         {
             SpawnCarePackageOnCurrentPlanet();
