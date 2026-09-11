@@ -26,6 +26,7 @@ public class Enemy : MonoBehaviour
 
     [Header("Attack Settings")]
     public int attackDamage = 8;
+    public int baseAttackDamage = -1;
     public float attackCooldown = 0.8f;
     public float attackRange = 1.3f;
     private float lastAttackTime = 0f;
